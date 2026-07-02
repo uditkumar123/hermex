@@ -1,3 +1,5 @@
+# Weekly upstream drift digest. Runs on a Monday cron; run manually from the
+# Actions tab (workflow_dispatch).
 name: Upstream Hermes-WebUI Watch
 
 on:
