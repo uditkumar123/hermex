@@ -1,0 +1,80 @@
+# Contributor CI: build and run the full XCTest suite on every pull request.
+# Uses no repository secrets, so PRs from forks get green CI too.
+#
+# Code signing is disabled (CODE_SIGNING_ALLOWED=NO) — fine for compile/test
+# runs per TESTFLIGHT.md; the "simulator installs must be signed" rule applies
+# to manual simulator testing, not CI.
+
+name: PR CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: macos-26
+    timeout-minutes: 90
+
+    env:
+      PROJECT_PATH: HermesMobile.xcodeproj
+      SCHEME: HermesMobile
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Select simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          name=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          phones = [
+              device["name"]
+              for runtime, devices in data["devices"].items()
+              if "iOS" in runtime
+              for device in devices
+              if device.get("isAvailable") and device["name"].startswith("iPhone")
+          ]
+          preferred = "iPhone 17"
+          print(preferred if preferred in phones else phones[0] if phones else "")
+          ')
+          if [[ -z "${name}" ]]; then
+            echo "No available iPhone simulator found:" >&2
+            xcrun simctl list devices available >&2
+            exit 1
+          fi
+          echo "Using simulator: ${name}"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test
+        env:
+          SIMULATOR_NAME: ${{ steps.sim.outputs.name }}
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project "${PROJECT_PATH}" \
+            -scheme "${SCHEME}" \
+            -destination "platform=iOS Simulator,name=${SIMULATOR_NAME}" \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          if-no-files-found: ignore
