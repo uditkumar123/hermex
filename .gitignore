@@ -62,8 +62,6 @@ fastlane/test_output/
 run-update-ecc-all.bat
 update-ecc.ps1
 /.ecc-backups
-.planning/ROADMAP.md
-.planning/STATE.md
 AGENTS.md
 
 # Android
