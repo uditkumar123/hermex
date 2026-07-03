@@ -162,6 +162,19 @@ interface HermesApi {
     @GET("/api/settings")
     suspend fun settings(): SettingsResponse
 
+    // ── Skills ──────────────────────────────────────────────────────
+
+    @GET("/api/skills")
+    suspend fun skills(): SkillsResponse
+
+    @GET("/api/skills/content")
+    suspend fun skillContent(@Query("name") name: String): SkillContentResponse
+
+    // ── Memory ──────────────────────────────────────────────────────
+
+    @GET("/api/memory")
+    suspend fun memory(): MemoryResponse
+
     // ── Session Export/Import ──────────────────────────────────────
 
     @GET("/api/session/export")

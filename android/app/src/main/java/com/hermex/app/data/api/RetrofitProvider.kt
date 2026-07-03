@@ -29,13 +29,13 @@ object RetrofitProvider {
 
     var onUnauthorized: (() -> Unit)? = null
 
-    fun getOrCreate(baseUrl: String): Retrofit {
+    fun getOrCreate(baseUrl: String, context: android.content.Context? = null): Retrofit {
         val normalizedUrl = normalizeUrl(baseUrl)
         if (normalizedUrl == currentBaseUrl && currentRetrofit != null) {
             return currentRetrofit!!
         }
 
-        val cookieJar = PersistentCookieJar()
+        val cookieJar = PersistentCookieJar(context)
 
         val headerInterceptor = Interceptor { chain ->
             val original = chain.request()
@@ -85,12 +85,12 @@ object RetrofitProvider {
         return retrofit
     }
 
-    fun createApi(baseUrl: String): HermesApi {
-        return getOrCreate(baseUrl).create(HermesApi::class.java)
+    fun createApi(baseUrl: String, context: android.content.Context? = null): HermesApi {
+        return getOrCreate(baseUrl, context).create(HermesApi::class.java)
     }
 
-    fun createOkHttpClient(): OkHttpClient {
-        val cookieJar = PersistentCookieJar()
+    fun createOkHttpClient(context: android.content.Context? = null): OkHttpClient {
+        val cookieJar = PersistentCookieJar(context)
         val headerInterceptor = Interceptor { chain ->
             val original = chain.request()
             val builder = original.newBuilder()
@@ -104,7 +104,7 @@ object RetrofitProvider {
             .cookieJar(cookieJar)
             .addInterceptor(headerInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.SECONDS) // No timeout for SSE
+            .readTimeout(0, TimeUnit.SECONDS)
             .build()
     }
 
@@ -125,8 +125,15 @@ object RetrofitProvider {
     }
 }
 
-class PersistentCookieJar : CookieJar {
+class PersistentCookieJar(private val context: android.content.Context? = null) : CookieJar {
     private val cookieStore = mutableMapOf<String, MutableList<Cookie>>()
+    private val prefs by lazy {
+        context?.getSharedPreferences("hermex_cookies", android.content.Context.MODE_PRIVATE)
+    }
+
+    init {
+        context?.let { loadFromStorage() }
+    }
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         val host = url.host
@@ -134,6 +141,7 @@ class PersistentCookieJar : CookieJar {
             removeAll { existing -> cookies.any { it.name == existing.name } }
             addAll(cookies)
         }
+        persistToStorage()
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
@@ -145,13 +153,56 @@ class PersistentCookieJar : CookieJar {
 
     fun clearAll() {
         cookieStore.clear()
+        persistToStorage()
     }
 
     fun clearForHost(host: String) {
         cookieStore.remove(host)
+        persistToStorage()
     }
 
     private fun Cookie.hasExpired(): Boolean {
         return expiresAt < System.currentTimeMillis()
+    }
+
+    private fun persistToStorage() {
+        val p = prefs ?: return
+        try {
+            val editor = p.edit()
+            val hosts = cookieStore.keys.toSet()
+            editor.putStringSet("hosts", hosts)
+            cookieStore.forEach { (host, cookies) ->
+                val serialized = cookies.joinToString("\n") { cookie ->
+                    "${cookie.name}\t${cookie.value}\t${cookie.expiresAt}\t${cookie.domain}\t${cookie.path}"
+                }
+                editor.putString("cookies_$host", serialized)
+            }
+            editor.apply()
+        } catch (_: Exception) { }
+    }
+
+    private fun loadFromStorage() {
+        val p = prefs ?: return
+        try {
+            val hosts = p.getStringSet("hosts", emptySet()) ?: emptySet()
+            hosts.forEach { host ->
+                val serialized = p.getString("cookies_$host", null) ?: return@forEach
+                val cookies = serialized.split("\n").mapNotNull { line ->
+                    val parts = line.split("\t")
+                    if (parts.size >= 5) {
+                        try {
+                            Cookie.Builder()
+                                .name(parts[0])
+                                .value(parts[1])
+                                .expiresAt(parts[2].toLong())
+                                .domain(parts[3])
+                                .let { if (parts[4].isNotEmpty()) it.path(parts[4]) else it }
+                                .build()
+                        } catch (_: Exception) { null }
+                    } else null
+                }
+                cookieStore[host] = cookies.toMutableList()
+            }
+        } catch (_: Exception) { }
     }
 }

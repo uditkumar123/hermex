@@ -236,3 +236,22 @@ data class FileContentResponse(
     @SerialName("is_binary") val isBinary: Boolean? = null,
     val language: String? = null
 )
+
+@Serializable
+data class SkillsResponse(
+    val skills: List<JsonElement>? = null
+)
+
+@Serializable
+data class SkillContentResponse(
+    val content: String? = null,
+    val name: String? = null,
+    val description: String? = null
+)
+
+@Serializable
+data class MemoryResponse(
+    val notes: String? = null,
+    val profile: String? = null,
+    @SerialName("session_notes") val sessionNotes: String? = null
+)

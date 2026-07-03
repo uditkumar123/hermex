@@ -12,6 +12,8 @@ import com.hermex.app.ui.auth.SettingsScreen
 import com.hermex.app.ui.chat.ChatScreen
 import com.hermex.app.ui.sessionlist.SessionListScreen
 import com.hermex.app.ui.workspace.FileBrowserScreen
+import com.hermex.app.ui.workspace.MemoryScreen
+import com.hermex.app.ui.workspace.SkillsScreen
 
 object Routes {
     const val ONBOARDING = "onboarding"
@@ -19,6 +21,8 @@ object Routes {
     const val SESSION_LIST = "session_list"
     const val CHAT = "chat/{sessionId}"
     const val FILE_BROWSER = "file_browser/{sessionId}"
+    const val SKILLS = "skills"
+    const val MEMORY = "memory"
     const val SETTINGS = "settings"
 
     fun chat(sessionId: String) = "chat/$sessionId"
@@ -90,6 +94,14 @@ fun HermexNavGraph() {
                     navController.popBackStack()
                 }
             )
+        }
+
+        composable(Routes.SKILLS) {
+            SkillsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.MEMORY) {
+            MemoryScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.SETTINGS) {
