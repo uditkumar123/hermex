@@ -1,0 +1,48 @@
+#!/bin/bash
+# Pre-commit hook: Verify Android build passes before committing
+# Install: cp .git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Check if we're in the right directory
+if [ ! -d "android" ]; then
+    echo "Warning: android/ directory not found, skipping build check"
+    exit 0
+fi
+
+# Only run build check if Android files are staged
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "^android/" || true)
+
+if [ -z "$STAGED_FILES" ]; then
+    echo "No Android files changed, skipping build check"
+    exit 0
+fi
+
+echo "Android files changed, running build check..."
+
+# Set JAVA_HOME if not set
+if [ -z "$JAVA_HOME" ]; then
+    export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
+fi
+
+# Find Gradle wrapper
+GRADLEWrapper=$(find "android" -name "gradlew.bat" -o -name "gradlew" 2>/dev/null | head -1)
+
+if [ -z "$GRADLEWrapper" ]; then
+    echo "Warning: Gradle wrapper not found, skipping build check"
+    exit 0
+fi
+
+# Run the build
+cd android
+if ./gradlew assembleDebug --no-daemon 2>&1; then
+    echo "Build check passed!"
+    exit 0
+else
+    echo ""
+    echo "Build failed! Please fix the errors before committing."
+    echo "To skip this check: git commit --no-verify"
+    exit 1
+fi
