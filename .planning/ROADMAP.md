@@ -81,3 +81,9 @@
 | Date | Phase | Action | Notes |
 |------|-------|--------|-------|
 | 2026-07-02 | — | Milestone created | 5 phases, 32 requirements, based on comprehensive code review |
+| 2026-07-02 | Phase 1 | Completed | Fixed CI runner labels, merged TestFlight workflows, lint blocking, Gradle Dependabot |
+| 2026-07-02 | Phase 2 | Completed | Cleartext traffic restricted, security-crypto upgraded, network security config, ProGuard verified |
+| 2026-07-02 | Phase 3 | Completed | Singleton AuthManager, lazy repos, HttpException handling, coroutine scope fix, Application cast fix |
+| 2026-07-02 | Phase 4 | Completed | 44 unit tests, MockK+Turbine+kotlinx-coroutines-test, testOptions configured |
+| 2026-07-02 | Phase 5 | Completed | Model picker, message context menu, reasoning state, fixed autoscroll, removed dead code |
+| 2026-07-02 | — | Milestone complete | 5/5 phases, 32/32 requirements, all builds passing
