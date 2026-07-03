@@ -16,7 +16,7 @@ Your server. Your phone. No middleman.
 
 Hermex is a native mobile client for driving a self-hosted [hermes-webui](https://github.com/nesquena/hermes-webui) server — a mobile cockpit for an AI agent that lives on a machine **you** control. The phone is the control plane, not the compute plane: the agent, its tools, and your data stay on your own hardware.
 
-- **Free.** No subscriptions, no in-app purchases.
+- **$1.99 on Google Play.** No subscriptions, no ads — just a one-time purchase.
 - **Private.** No analytics, no tracking, no third-party relay — the app talks only to your server.
 - **Native.** Built with platform-native UI (SwiftUI for iOS, Jetpack Compose for Android).
 
