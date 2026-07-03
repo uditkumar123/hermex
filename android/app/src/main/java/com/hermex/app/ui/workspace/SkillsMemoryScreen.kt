@@ -25,6 +25,7 @@ fun SkillsScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var skills by remember { mutableStateOf<List<SkillItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedSkill by remember { mutableStateOf<SkillItem?>(null) }
     var skillContent by remember { mutableStateOf<String?>(null) }
@@ -34,6 +35,7 @@ fun SkillsScreen(onBack: () -> Unit) {
         val api = RetrofitProvider.createApi(url)
         scope.launch {
             isLoading = true
+            errorMessage = null
             try {
                 val response = api.skills()
                 skills = response.skills?.mapNotNull { skill ->
@@ -45,7 +47,9 @@ fun SkillsScreen(onBack: () -> Unit) {
                         )
                     } catch (_: Exception) { null }
                 } ?: emptyList()
-            } catch (_: Exception) { } finally { isLoading = false }
+            } catch (e: Exception) {
+                errorMessage = e.message ?: "Failed to load skills"
+            } finally { isLoading = false }
         }
     }
 
@@ -56,7 +60,9 @@ fun SkillsScreen(onBack: () -> Unit) {
             try {
                 val response = api.skillContent(name)
                 skillContent = response.content
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                errorMessage = e.message ?: "Failed to load skill content"
+            }
         }
     }
 
@@ -93,6 +99,18 @@ fun SkillsScreen(onBack: () -> Unit) {
                     singleLine = true
                 )
                 if (isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (errorMessage != null) {
+                    Card(
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.width(8.dp))
+                            Text(errorMessage ?: "", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
                 val filtered = if (searchQuery.isBlank()) skills
                 else skills.filter { it.name.contains(searchQuery, ignoreCase = true) }
                 LazyColumn {
@@ -119,6 +137,7 @@ fun MemoryScreen(onBack: () -> Unit) {
     var profile by remember { mutableStateOf<String?>(null) }
     var sessionNotes by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     fun loadMemory() {
@@ -126,12 +145,15 @@ fun MemoryScreen(onBack: () -> Unit) {
         val api = RetrofitProvider.createApi(url)
         scope.launch {
             isLoading = true
+            errorMessage = null
             try {
                 val response = api.memory()
                 notes = response.notes
                 profile = response.profile
                 sessionNotes = response.sessionNotes
-            } catch (_: Exception) { } finally { isLoading = false }
+            } catch (e: Exception) {
+                errorMessage = e.message ?: "Failed to load memory"
+            } finally { isLoading = false }
         }
     }
 
@@ -154,6 +176,18 @@ fun MemoryScreen(onBack: () -> Unit) {
                 Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Session") })
             }
             if (isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (errorMessage != null) {
+                Card(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.width(8.dp))
+                        Text(errorMessage ?: "", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
             when (selectedTab) {
                 0 -> Text(notes ?: "No notes", Modifier.padding(16.dp), style = MaterialTheme.typography.bodyLarge)
                 1 -> Text(profile ?: "No profile", Modifier.padding(16.dp), style = MaterialTheme.typography.bodyLarge)
