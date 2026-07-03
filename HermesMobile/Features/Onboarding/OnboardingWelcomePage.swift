@@ -21,8 +21,8 @@ struct OnboardingWelcomePage: View {
                 ZStack {
                     RadialGradient(
                         colors: [
-                            Color(red: 1.0, green: 0.74, blue: 0.10).opacity(0.55),
-                            Color(red: 1.0, green: 0.62, blue: 0.08).opacity(0.22),
+                            Color(red: 0.12, green: 0.92, blue: 1.0).opacity(0.48),
+                            Color(red: 0.30, green: 0.94, blue: 0.70).opacity(0.18),
                             .clear
                         ],
                         center: .center,
@@ -34,7 +34,7 @@ struct OnboardingWelcomePage: View {
 
                     RadialGradient(
                         colors: [
-                            Color(red: 1.0, green: 0.78, blue: 0.18).opacity(0.35),
+                            Color(red: 0.16, green: 0.88, blue: 0.90).opacity(0.30),
                             .clear
                         ],
                         center: .center,
@@ -43,7 +43,7 @@ struct OnboardingWelcomePage: View {
                     )
                     .frame(width: iconSize * 1.8, height: iconSize * 1.8)
 
-                    Image("HermesAppIcon")
+                    Image("HermesCompanionLogoMark")
                         .resizable()
                         .scaledToFit()
                         .frame(width: iconSize, height: iconSize)
@@ -59,10 +59,10 @@ struct OnboardingWelcomePage: View {
                                     lineWidth: 1
                                 )
                         )
-                        .shadow(color: Color(red: 1.0, green: 0.62, blue: 0.08).opacity(0.35), radius: 24, y: 10)
+                        .shadow(color: Color(red: 0.18, green: 0.90, blue: 0.94).opacity(0.36), radius: 24, y: 10)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Hermex")
+                .accessibilityLabel("Hermes Companion")
 
                 Spacer(minLength: 32)
 
