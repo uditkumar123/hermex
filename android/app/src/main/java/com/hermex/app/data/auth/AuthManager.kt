@@ -2,7 +2,6 @@ package com.hermex.app.data.auth
 
 import android.content.Context
 import com.hermex.app.data.api.LoginRequest
-import com.hermex.app.data.api.PersistentCookieJar
 import com.hermex.app.data.api.RetrofitProvider
 import com.hermex.app.data.model.APIError
 import com.hermex.app.data.model.AuthStatusResponse
@@ -183,7 +182,7 @@ class AuthManager private constructor(private val context: Context) {
     private fun clearCookiesForServer(serverUrl: String) {
         try {
             val host = URI(RetrofitProvider.normalizeUrl(serverUrl)).host ?: return
-            PersistentCookieJar(context).clearForHost(host)
+            RetrofitProvider.clearCookiesForHost(host)
         } catch (e: Exception) {
             Timber.w(e, "Failed to clear cookies for server")
         }

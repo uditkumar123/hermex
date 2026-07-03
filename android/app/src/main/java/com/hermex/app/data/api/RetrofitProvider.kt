@@ -27,8 +27,20 @@ object RetrofitProvider {
 
     private var currentBaseUrl: String? = null
     private var currentRetrofit: Retrofit? = null
+    private var cookieJar: PersistentCookieJar? = null
 
     var onUnauthorized: (() -> Unit)? = null
+
+    fun clearCookiesForHost(host: String) {
+        cookieJar?.clearForHost(host)
+    }
+
+    private fun ensureCookieJar(context: android.content.Context?): PersistentCookieJar {
+        if (cookieJar == null) {
+            cookieJar = PersistentCookieJar(context)
+        }
+        return cookieJar!!
+    }
 
     fun getOrCreate(baseUrl: String, context: android.content.Context? = null): Retrofit {
         val normalizedUrl = normalizeUrl(baseUrl)
@@ -36,7 +48,7 @@ object RetrofitProvider {
             return currentRetrofit!!
         }
 
-        val cookieJar = PersistentCookieJar(context)
+        val jar = ensureCookieJar(context)
 
         val headerInterceptor = Interceptor { chain ->
             val original = chain.request()
@@ -69,7 +81,7 @@ object RetrofitProvider {
         }
 
         val okHttpClient = OkHttpClient.Builder()
-            .cookieJar(cookieJar)
+            .cookieJar(jar)
             .addInterceptor(headerInterceptor)
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
@@ -95,7 +107,7 @@ object RetrofitProvider {
     }
 
     fun createOkHttpClient(context: android.content.Context? = null): OkHttpClient {
-        val cookieJar = PersistentCookieJar(context)
+        val jar = ensureCookieJar(context)
         val headerInterceptor = Interceptor { chain ->
             val original = chain.request()
             val builder = original.newBuilder()
@@ -106,7 +118,7 @@ object RetrofitProvider {
         }
 
         return OkHttpClient.Builder()
-            .cookieJar(cookieJar)
+            .cookieJar(jar)
             .addInterceptor(headerInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(0, TimeUnit.SECONDS)
@@ -116,6 +128,7 @@ object RetrofitProvider {
     fun invalidate() {
         currentBaseUrl = null
         currentRetrofit = null
+        cookieJar?.clearAll()
     }
 
     fun warmupSession(baseUrl: String, context: android.content.Context? = null) {
