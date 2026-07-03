@@ -41,7 +41,6 @@ jobs:
     - name: Run Lint
       working-directory: android
       run: ./gradlew lint --no-daemon
-      continue-on-error: true
 
     - name: Upload Lint Report
       uses: actions/upload-artifact@v4
@@ -49,4 +48,16 @@ jobs:
       with:
         name: lint-report
         path: android/app/build/reports/lint-results-debug.html
+        retention-days: 7
+
+    - name: Run Unit Tests
+      working-directory: android
+      run: ./gradlew test --no-daemon
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: android/app/build/reports/tests/
         retention-days: 7
