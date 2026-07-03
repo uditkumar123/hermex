@@ -169,7 +169,7 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
                     androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                     androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.w("Hermex", "EncryptedSharedPreferences unavailable, falling back to plain storage", e)
                 ctx.getSharedPreferences("hermex_cookies", android.content.Context.MODE_PRIVATE)
             }
