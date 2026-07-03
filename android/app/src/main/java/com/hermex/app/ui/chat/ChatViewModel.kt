@@ -102,9 +102,38 @@ class ChatViewModel(
     }
 
     fun sendMessage(text: String) {
-        val repo = chatRepo ?: return
         val message = text.trim()
         if (message.isEmpty()) return
+
+        if (message.startsWith("/")) {
+            val resolved = resolveSlashCommand(message)
+            if (resolved != null) {
+                val commandName = resolved.second["command"] ?: ""
+                val commandArgs = resolved.second["args"]?.trim().orEmpty()
+
+                when (commandName) {
+                    "steer" -> {
+                        if (commandArgs.isEmpty()) {
+                            _uiState.update { it.copy(errorMessage = "Usage: /steer <text>") }
+                            return
+                        }
+                        steerChat(commandArgs)
+                        return
+                    }
+                    "interrupt" -> {
+                        cancelStream()
+                        return
+                    }
+                }
+
+                if (slashCommands.none { it.name == commandName }) {
+                    _uiState.update { it.copy(errorMessage = "Unknown command: /$commandName") }
+                    return
+                }
+            }
+        }
+
+        val repo = chatRepo ?: return
 
         val userMessage = ChatMessage(
             role = "user",
