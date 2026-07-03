@@ -65,10 +65,12 @@ class AuthManager private constructor(private val context: Context) {
 
     fun initialize() {
         ServerRegistry.initialize(context)
-        val active = ServerRegistry.activeServer()
-        if (active != null) {
-            CustomHeaderStore.configure(active.urlString, context)
-            _state.value = AuthState.LoggedOut(active.urlString)
+        if (_state.value is AuthState.Unconfigured) {
+            val active = ServerRegistry.activeServer()
+            if (active != null) {
+                CustomHeaderStore.configure(active.urlString, context)
+                _state.value = AuthState.LoggedOut(active.urlString)
+            }
         }
     }
 

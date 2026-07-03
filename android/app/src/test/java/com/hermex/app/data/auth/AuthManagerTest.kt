@@ -140,6 +140,27 @@ class AuthManagerTest {
     }
 
     @Test
+    fun `initialize does not overwrite LoggedIn state`() = runTest {
+        authManager.connectToServer("https://active-server.com")
+        assertEquals(AuthState.LoggedIn("https://active-server.com"), authManager.state.first())
+
+        authManager.initialize()
+
+        assertEquals(AuthState.LoggedIn("https://active-server.com"), authManager.state.first())
+    }
+
+    @Test
+    fun `initialize does not overwrite LoggedOut state`() = runTest {
+        authManager.connectToServer("https://active-server.com")
+        authManager.handleSessionExpired()
+        assertEquals(AuthState.LoggedOut("https://active-server.com"), authManager.state.first())
+
+        authManager.initialize()
+
+        assertEquals(AuthState.LoggedOut("https://active-server.com"), authManager.state.first())
+    }
+
+    @Test
     fun `testConnection probes health with GET`() = runTest {
         val server = MockWebServer()
         server.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
