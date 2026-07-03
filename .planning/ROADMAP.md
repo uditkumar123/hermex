@@ -72,6 +72,12 @@
 | Date | Phase | Action | Notes |
 |------|-------|--------|-------|
 | 2026-07-02 | — | Milestone created | 5 phases, 11 requirements, continuing from M2 parity work |
+| 2026-07-02 | Phase 6 | Completed | 73 total tests (29 new ViewModel tests, Robolectric) |
+| 2026-07-02 | Phase 7 | Completed | File browser (list/search/preview), markdown in messages |
+| 2026-07-02 | Phase 8 | Completed | 21 slash commands, autocomplete dropdown in composer |
+| 2026-07-02 | Phase 9 | Completed | Skills browser, memory panel with tabs |
+| 2026-07-02 | Phase 10 | Completed | PersistentCookieJar saves to SharedPreferences |
+| 2026-07-02 | — | Milestone complete | 5/5 phases, all builds + tests passing |
 
 ## Previous Milestones
 - Milestone 1 (v1.0): Android MVP — 5/5 ✅
