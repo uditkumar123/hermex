@@ -35,6 +35,7 @@ Thumbs.db
 # ==========================================
 # AI / Agent tooling — NEVER commit these
 # ==========================================
+.opencode/
 .agents/
 .agy/
 .codex/

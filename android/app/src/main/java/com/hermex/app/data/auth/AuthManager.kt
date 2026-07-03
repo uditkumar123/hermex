@@ -10,6 +10,7 @@ import com.hermex.app.data.model.LoginResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.SerializationException
 import retrofit2.HttpException
 import timber.log.Timber
 import java.net.ConnectException
@@ -147,9 +148,11 @@ class AuthManager private constructor(private val context: Context) {
                 502, 503, 504 -> APIError.Http(e.code())
                 else -> APIError.Http(e.code())
             }
+            is SerializationException -> APIError.Decoding(e)
             is SocketTimeoutException -> APIError.Network(e)
             is ConnectException -> APIError.Network(e)
             is UnknownHostException -> APIError.Network(e)
+            is APIError -> e
             else -> APIError.Network(e)
         }
     }

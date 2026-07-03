@@ -7,11 +7,11 @@
 Your server. Your phone. No middleman.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
-[![Android APK](https://img.shields.io/badge/APK-free-brightgreen?logo=android)](https://github.com/uzairansaruzi/hermex/releases)
+[![Android APK](https://img.shields.io/badge/APK-free-brightgreen?logo=android)](https://github.com/uditkumar123/hermex/releases)
 [![Google Play](https://img.shields.io/badge/Google_Play-$1.99-3DDC84?logo=googleplay)](https://play.google.com/store/apps/details?id=com.hermex.app)
 [![iOS](https://img.shields.io/badge/iOS-18%2B-000000?logo=apple&logoColor=white)](https://apps.apple.com/app/hermex/id6767006319)
 
-[Report a bug](https://github.com/uzairansaruzi/hermex/issues) · [Contributing](CONTRIBUTING.md)
+[Report a bug](https://github.com/uditkumar123/hermex/issues) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -54,7 +54,7 @@ Install and start `hermes-webui` on macOS, Linux, or Windows/WSL2 (Python 3.11+)
 
 ### 3. Connect
 
-**Android (free):** [Download the APK](https://github.com/uzairansaruzi/hermex/releases) from GitHub Releases.
+**Android (free):** [Download the APK](https://github.com/uditkumar123/hermex/releases) from GitHub Releases.
 **Android (paid):** [Get it on Google Play](https://play.google.com/store/apps/details?id=com.hermex.app) for $1.99 — supports development.
 **iOS:** [Download from the App Store](https://apps.apple.com/app/hermex/id6767006319).
 

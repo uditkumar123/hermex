@@ -7,6 +7,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.SerializationException
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -126,6 +127,14 @@ class AuthManagerTest {
         val exception = RuntimeException("generic error")
         val result = invokeWrapError(exception)
         assertTrue(result is APIError.Network)
+    }
+
+    @Test
+    fun `wrapError correctly identifies SerializationException as Decoding`() {
+        val exception = SerializationException("Unexpected json token at offset 0: expected start of the object, but had <")
+        val result = invokeWrapError(exception)
+        assertTrue(result is APIError.Decoding)
+        assertTrue(result.message!!.contains("unexpected response"))
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -1,10 +1,10 @@
 package com.hermex.app.data.api
 
+import android.util.Log
 import com.hermex.app.data.auth.CustomHeaderStore
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -13,6 +13,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
+import java.net.URI
 import java.util.concurrent.TimeUnit
 
 object RetrofitProvider {
@@ -60,7 +61,11 @@ object RetrofitProvider {
         }
 
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            level = if (context != null && (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
 
         val okHttpClient = OkHttpClient.Builder()
@@ -118,17 +123,52 @@ object RetrofitProvider {
         if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
             normalized = "https://$normalized"
         }
+        if (normalized.startsWith("http://")) {
+            val host = try {
+                java.net.URI(normalized).host
+            } catch (_: Exception) { null }
+            if (host != null && !isLocalAddress(host)) {
+                Log.w("Hermex", "Connecting via unencrypted HTTP to non-local server: $host")
+            }
+        }
         if (!normalized.endsWith("/")) {
             normalized = "$normalized/"
         }
         return normalized
+    }
+
+    private fun isLocalAddress(host: String): Boolean {
+        if (host == "localhost" || host.startsWith("127.")) return true
+        if (host.startsWith("10.")) return true
+        if (host.startsWith("192.168.")) return true
+        if (host.startsWith("172.")) {
+            val second = host.substringAfter(".").substringBefore(".").toIntOrNull() ?: return false
+            if (second in 16..31) return true
+        }
+        if (host.startsWith("100.")) {
+            val second = host.substringAfter(".").substringBefore(".").toIntOrNull() ?: return false
+            if (second in 64..127) return true
+        }
+        if (host.endsWith(".local")) return true
+        return false
     }
 }
 
 class PersistentCookieJar(private val context: android.content.Context? = null) : CookieJar {
     private val cookieStore = mutableMapOf<String, MutableList<Cookie>>()
     private val prefs by lazy {
-        context?.getSharedPreferences("hermex_cookies", android.content.Context.MODE_PRIVATE)
+        context?.let { ctx ->
+            val masterKeyAlias = androidx.security.crypto.MasterKeys.getOrCreate(
+                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+            )
+            androidx.security.crypto.EncryptedSharedPreferences.create(
+                "hermex_cookies_encrypted",
+                masterKeyAlias,
+                ctx,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
     }
 
     init {

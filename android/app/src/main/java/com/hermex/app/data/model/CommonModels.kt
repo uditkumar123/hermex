@@ -19,7 +19,7 @@ sealed class APIError : Exception() {
         override val message: String get() = "HTTP $statusCode: ${body ?: "Unknown error"}"
     }
     data class Decoding(override val cause: Throwable) : APIError() {
-        override val message: String get() = "Decoding error: ${cause.message}"
+        override val message: String get() = "Server returned an unexpected response. Verify the server URL is correct and the Hermex server is running."
     }
     data object Unauthorized : APIError() {
         override val message: String get() = "Unauthorized"

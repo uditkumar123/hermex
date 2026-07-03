@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- All connections to user-specified self-hosted servers.
-         HTTPS is recommended but not required — users on local networks
-         or Tailscale may use HTTP. -->
+    <!-- Hermex connects to user-specified self-hosted servers. HTTPS is recommended
+         but cleartext HTTP is permitted for local-network and Tailscale (100.64.0.0/10)
+         deployments where TLS is impractical.
+
+         SECURITY: The app validates non-local HTTP connections at runtime and logs
+         a warning. Users should prefer HTTPS via Cloudflare Tunnel, Tailscale Funnel,
+         or a reverse proxy for any server reachable from the public internet.
+
+         Production hardening backlog:
+         - User-pinned certificate fingerprint (TrustKit / OkHttp CertificatePinner)
+         - Per-server trust anchor configuration
+         See: https://developer.android.com/privacy-and-security/security-config -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-
-    <!-- NOTE: SSL certificate pinning is not yet implemented.
-         The app connects to user-specified self-hosted servers whose certificates
-         vary. Pin enforcement would break valid connections. Future hardening:
-         - Allow users to pin their server's certificate fingerprint
-         - Use TrustKit or OkHttp CertificatePinner for known servers
-         See: https://developer.android.com/privacy-and-security/security-config#certificate-pinning -->
 </network-security-config>
