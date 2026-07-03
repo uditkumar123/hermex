@@ -1,73 +1,77 @@
-# Xcode
+# ==========================================
+# Hermex Android - .gitignore
+# ==========================================
+
+# ---------- Android ----------
+android/local.properties
+android/app/build/
+android/.gradle/
+android/build/
+android/gradlew.bat
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# ---------- Secrets ----------
+.env
+.env.local
+.env.*.local
+
+# ---------- Editor ----------
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+
+# ---------- macOS ----------
+.DS_Store
+
+# ---------- Linux ----------
+Thumbs.db
+
+# ==========================================
+# AI / Agent tooling — NEVER commit these
+# ==========================================
+.agents/
+.agy/
+.codex/
+.codex-tmp/
+.claude/
+.ecc-backups/
+.pi/
+.sc/
+.agent/
+CLAUDE.md
+AGENTS.md
+ECC/
+run-update-ecc-all.bat
+update-ecc.ps1
+.planning/
+.xcodebuildmcp/
+docs/agents/
+
+# ==========================================
+# iOS (upstream reference — remove when diverging)
+# ==========================================
 DerivedData/
 build/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
 *.xcuserstate
 *.xcscmblueprint
-
-# Swift Package Manager
 .build/
 Package.resolved
 .swiftpm/
-
-# macOS
-.DS_Store
-
-# Local secrets
-.env
-.env.local
-.env.*.local
-
-# Per-machine signing overrides (see CONTRIBUTING.md)
 Config/Local.xcconfig
-
-# Local reference material
-UPDATES.md
-.obsidian/
-
-# Local agent tooling (per-machine caches, skills, session state)
-node_modules/
-.codex-tmp/
-.agents/
-.sc/
-.claude/
-
-# App packaging
 *.ipa
 *.dSYM.zip
 *.dSYM
-
-# Fastlane
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output/
-
-# Pi tooling artifacts (review outputs, fix plans, etc.)
-.pi/
-
-# Editor swap/temp files
-*.swp
-*.swo
-*~
-
-# Retired per-session progress log (removed in #224; history lives in git log / merged PRs)
-/PROGRESS.md
-
-# Local session-handoff state (read at session start, overwritten at wrap-up; not tracked)
-/CURRENT.md
-/.agent
-/.codex
-run-update-ecc-all.bat
-update-ecc.ps1
-/.ecc-backups
-AGENTS.md
-
-# Android
-android/local.properties
-android/app/build/
-android/.gradle/
-android/build/
-*.apk
-*.aab
+PROGRESS.md
+CURRENT.md
