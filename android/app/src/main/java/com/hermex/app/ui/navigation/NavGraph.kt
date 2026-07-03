@@ -158,6 +158,12 @@ fun HermexNavGraph() {
                 },
                 onSettingsClick = {
                     navController.navigate(Routes.SETTINGS)
+                },
+                onSkillsClick = {
+                    navController.navigate(Routes.SKILLS)
+                },
+                onMemoryClick = {
+                    navController.navigate(Routes.MEMORY)
                 }
             )
         }
@@ -171,6 +177,12 @@ fun HermexNavGraph() {
                 sessionId = sessionId,
                 onBack = {
                     navController.popBackStack()
+                },
+                onSkillsClick = {
+                    navController.navigate(Routes.SKILLS)
+                },
+                onMemoryClick = {
+                    navController.navigate(Routes.MEMORY)
                 }
             )
         }

@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
 fun SessionListScreen(
     onSessionClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
+    onSkillsClick: () -> Unit = {},
+    onMemoryClick: () -> Unit = {},
     viewModel: SessionListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -95,6 +97,12 @@ fun SessionListScreen(
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                    IconButton(onClick = onMemoryClick) {
+                        Icon(Icons.Default.Storage, contentDescription = "Memory")
+                    }
+                    IconButton(onClick = onSkillsClick) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = "Skills")
                     }
                 }
             )

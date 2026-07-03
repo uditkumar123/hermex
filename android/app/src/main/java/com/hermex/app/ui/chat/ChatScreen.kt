@@ -6,7 +6,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +28,8 @@ import kotlinx.coroutines.launch
 fun ChatScreen(
     sessionId: String,
     onBack: () -> Unit,
+    onSkillsClick: () -> Unit = {},
+    onMemoryClick: () -> Unit = {},
     viewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(
             context = (LocalContext.current.applicationContext as? android.app.Application)
@@ -80,6 +84,14 @@ fun ChatScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onMemoryClick) {
+                        Icon(Icons.Default.Storage, contentDescription = "Memory")
+                    }
+                    IconButton(onClick = onSkillsClick) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = "Skills")
                     }
                 }
             )
