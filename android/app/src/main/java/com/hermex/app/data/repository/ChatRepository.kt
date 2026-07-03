@@ -8,10 +8,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import timber.log.Timber
 
-class ChatRepository(private val serverUrl: String) {
+class ChatRepository(
+    private val serverUrl: String,
+    private val context: android.content.Context? = null
+) {
 
-    private val api by lazy { RetrofitProvider.createApi(serverUrl) }
-    private val sseClient by lazy { SSEClient() }
+    private val api by lazy { RetrofitProvider.createApi(serverUrl, context) }
+    private val sseClient by lazy { SSEClient(RetrofitProvider.createOkHttpClient(context)) }
 
     suspend fun startChat(
         sessionId: String,

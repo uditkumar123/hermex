@@ -13,7 +13,7 @@ class SessionRepository(
     private val context: Context? = null
 ) {
 
-    private val api: HermesApi by lazy { RetrofitProvider.createApi(serverUrl) }
+    private val api: HermesApi by lazy { RetrofitProvider.createApi(serverUrl, context) }
     private val offlineCache: OfflineCache? by lazy { context?.let { OfflineCache(it) } }
 
     suspend fun fetchSessions(): Result<List<SessionSummary>> {

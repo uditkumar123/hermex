@@ -23,6 +23,7 @@ data class AuthStatusResponse(
 ) {
     val isAuthRequired: Boolean
         get() = when {
+            authEnabled == false -> false
             authenticated != null -> !authenticated
             authEnabled != null -> authEnabled && loggedIn != true
             else -> false

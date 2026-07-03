@@ -1,11 +1,30 @@
 package com.hermex.app.ui.navigation
 
+import android.net.Uri
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.hermex.app.data.auth.AuthManager
+import com.hermex.app.data.auth.AuthState
+import com.hermex.app.data.auth.ServerRegistry
+import com.hermex.app.data.auth.SessionExpiredMessage
 import com.hermex.app.ui.auth.ConnectScreen
 import com.hermex.app.ui.auth.OnboardingScreen
 import com.hermex.app.ui.auth.SettingsScreen
@@ -16,8 +35,10 @@ import com.hermex.app.ui.workspace.MemoryScreen
 import com.hermex.app.ui.workspace.SkillsScreen
 
 object Routes {
+    const val AUTH_GATE = "auth_gate"
     const val ONBOARDING = "onboarding"
     const val CONNECT = "connect"
+    const val CONNECT_WITH_ARGS = "connect?serverUrl={serverUrl}&message={message}"
     const val SESSION_LIST = "session_list"
     const val CHAT = "chat/{sessionId}"
     const val FILE_BROWSER = "file_browser/{sessionId}"
@@ -27,20 +48,61 @@ object Routes {
 
     fun chat(sessionId: String) = "chat/$sessionId"
     fun fileBrowser(sessionId: String) = "file_browser/$sessionId"
+    fun connect(serverUrl: String? = null, message: String? = null): String {
+        if (serverUrl.isNullOrBlank()) return CONNECT
+        return "connect?serverUrl=${Uri.encode(serverUrl)}&message=${Uri.encode(message.orEmpty())}"
+    }
 }
 
 @Composable
 fun HermexNavGraph() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val authManager = remember { AuthManager.getInstance(context) }
+    val authState by authManager.state.collectAsState()
+    val authError by authManager.error.collectAsState()
+
+    LaunchedEffect(authState, authError) {
+        val loggedOut = authState as? AuthState.LoggedOut
+        if (loggedOut != null && authError == SessionExpiredMessage) {
+            navController.navigate(Routes.connect(loggedOut.serverUrl, SessionExpiredMessage)) {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
-        startDestination = Routes.ONBOARDING
+        startDestination = Routes.AUTH_GATE
     ) {
+        composable(Routes.AUTH_GATE) {
+            AuthGateScreen { destination ->
+                when (destination) {
+                    StartupDestination.Onboarding -> navController.navigate(Routes.ONBOARDING) {
+                        popUpTo(Routes.AUTH_GATE) { inclusive = true }
+                    }
+                    StartupDestination.SessionList -> navController.navigate(Routes.SESSION_LIST) {
+                        popUpTo(Routes.AUTH_GATE) { inclusive = true }
+                    }
+                    is StartupDestination.Password -> navController.navigate(
+                        Routes.connect(destination.serverUrl, destination.message)
+                    ) {
+                        popUpTo(Routes.AUTH_GATE) { inclusive = true }
+                    }
+                    is StartupDestination.Retry -> navController.navigate(
+                        Routes.connect(destination.serverUrl, destination.message)
+                    ) {
+                        popUpTo(Routes.AUTH_GATE) { inclusive = true }
+                    }
+                }
+            }
+        }
+
         composable(Routes.ONBOARDING) {
             OnboardingScreen(
                 onConnectClick = {
-                    navController.navigate(Routes.CONNECT)
+                    navController.navigate(Routes.connect())
                 }
             )
         }
@@ -54,6 +116,37 @@ fun HermexNavGraph() {
                 },
                 onBack = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Routes.CONNECT_WITH_ARGS,
+            arguments = listOf(
+                navArgument("serverUrl") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("message") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            ConnectScreen(
+                initialServerUrl = backStackEntry.arguments?.getString("serverUrl"),
+                initialMessage = backStackEntry.arguments?.getString("message")?.ifBlank { null },
+                onConnected = {
+                    navController.navigate(Routes.SESSION_LIST) {
+                        popUpTo(Routes.AUTH_GATE) { inclusive = true }
+                    }
+                },
+                onBack = {
+                    navController.navigate(Routes.ONBOARDING) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
@@ -114,6 +207,50 @@ fun HermexNavGraph() {
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AuthGateScreen(onDestination: (StartupDestination) -> Unit) {
+    val context = LocalContext.current
+    val authManager = remember { AuthManager.getInstance(context) }
+
+    LaunchedEffect(Unit) {
+        authManager.initialize()
+        val serverUrl = ServerRegistry.activeServer()?.urlString
+        if (serverUrl.isNullOrBlank()) {
+            onDestination(StartupDestination.Onboarding)
+            return@LaunchedEffect
+        }
+
+        authManager.checkAuthStatus(serverUrl).fold(
+            onSuccess = { status ->
+                val destination = StartupRouteResolver.resolve(serverUrl, status)
+                if (destination == StartupDestination.SessionList) {
+                    authManager.connectToServer(serverUrl)
+                }
+                onDestination(destination)
+            },
+            onFailure = { error ->
+                onDestination(
+                    StartupRouteResolver.resolve(
+                        activeServerUrl = serverUrl,
+                        authStatus = null,
+                        failureMessage = error.message ?: "Unable to verify saved server session."
+                    )
+                )
+            }
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            CircularProgressIndicator()
+            Text(
+                text = "Checking saved session...",
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }

@@ -34,6 +34,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectScreen(
+    initialServerUrl: String? = null,
+    initialMessage: String? = null,
     onConnected: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -42,12 +44,12 @@ fun ConnectScreen(
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
-    var serverUrl by remember { mutableStateOf("") }
+    var serverUrl by remember { mutableStateOf(initialServerUrl.orEmpty()) }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var step by remember { mutableStateOf(ConnectStep.ENTER_URL) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var authRequired by remember { mutableStateOf(false) }
+    var step by remember { mutableStateOf(if (initialServerUrl.isNullOrBlank()) ConnectStep.ENTER_URL else ConnectStep.ENTER_PASSWORD) }
+    var errorMessage by remember { mutableStateOf<String?>(initialMessage) }
+    var authRequired by remember { mutableStateOf(!initialServerUrl.isNullOrBlank()) }
     var serverVersion by remember { mutableStateOf<String?>(null) }
 
     Scaffold(

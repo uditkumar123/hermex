@@ -13,6 +13,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import retrofit2.HttpException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -135,6 +137,24 @@ class AuthManagerTest {
         val result = invokeWrapError(exception)
         assertTrue(result is APIError.Decoding)
         assertTrue(result.message!!.contains("unexpected response"))
+    }
+
+    @Test
+    fun `testConnection probes health with GET`() = runTest {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
+        server.start()
+
+        try {
+            val result = authManager.testConnection(server.url("/").toString())
+            val request = server.takeRequest()
+
+            assertTrue(result.isSuccess)
+            assertEquals("GET", request.method)
+            assertEquals("/health", request.path)
+        } finally {
+            server.shutdown()
+        }
     }
 
     @Suppress("UNCHECKED_CAST")

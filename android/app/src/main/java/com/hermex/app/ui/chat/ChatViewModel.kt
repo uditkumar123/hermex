@@ -40,12 +40,12 @@ class ChatViewModel(
 
     private val sessionRepo: SessionRepository? by lazy {
         val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
-        url?.let { SessionRepository(it) }
+        url?.let { SessionRepository(it, getApplication()) }
     }
 
     private val chatRepo: ChatRepository? by lazy {
         val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
-        url?.let { ChatRepository(it) }
+        url?.let { ChatRepository(it, getApplication()) }
     }
 
     private var streamJob: Job? = null

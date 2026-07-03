@@ -2,6 +2,7 @@ package com.hermex.app.data.auth
 
 import android.content.Context
 import com.hermex.app.data.api.LoginRequest
+import com.hermex.app.data.api.PersistentCookieJar
 import com.hermex.app.data.api.RetrofitProvider
 import com.hermex.app.data.model.APIError
 import com.hermex.app.data.model.AuthStatusResponse
@@ -17,8 +18,11 @@ import okhttp3.Request
 import retrofit2.HttpException
 import timber.log.Timber
 import java.net.ConnectException
+import java.net.URI
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+
+const val SessionExpiredMessage = "Session expired. Sign in again."
 
 sealed class AuthState {
     data object Unconfigured : AuthState()
@@ -55,6 +59,10 @@ class AuthManager private constructor(private val context: Context) {
             else -> null
         }
 
+    init {
+        RetrofitProvider.onUnauthorized = { handleSessionExpired() }
+    }
+
     fun initialize() {
         ServerRegistry.initialize(context)
         val active = ServerRegistry.activeServer()
@@ -76,13 +84,14 @@ class AuthManager private constructor(private val context: Context) {
                     .build()
                 val request = Request.Builder()
                     .url(healthUrl)
-                    .head()
+                    .get()
                     .build()
-                val response = client.newCall(request).execute()
-                if (response.isSuccessful || response.code in 301..399) {
-                    Result.success(HealthResponse())
-                } else {
-                    Result.failure(APIError.Http(response.code))
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful || response.code in 301..399) {
+                        Result.success(HealthResponse())
+                    } else {
+                        Result.failure(APIError.Http(response.code))
+                    }
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Connection test failed")
@@ -93,7 +102,7 @@ class AuthManager private constructor(private val context: Context) {
 
     suspend fun checkAuthStatus(serverUrl: String): Result<AuthStatusResponse> {
         return try {
-            val api = RetrofitProvider.createApi(serverUrl)
+            val api = RetrofitProvider.createApi(serverUrl, context)
             val response = api.authStatus()
             Result.success(response)
         } catch (e: Exception) {
@@ -106,12 +115,13 @@ class AuthManager private constructor(private val context: Context) {
         _error.value = null
         return try {
             RetrofitProvider.warmupSession(serverUrl, context)
-            val api = RetrofitProvider.createApi(serverUrl)
+            val api = RetrofitProvider.createApi(serverUrl, context)
             val response = api.login(LoginRequest(password))
             if (response.isSuccess) {
                 ServerRegistry.addServer(serverUrl, null, context)
                 CustomHeaderStore.configure(serverUrl, context)
                 _state.value = AuthState.LoggedIn(serverUrl)
+                _error.value = null
                 Result.success(response)
             } else {
                 _error.value = response.displayMessage
@@ -128,11 +138,13 @@ class AuthManager private constructor(private val context: Context) {
     suspend fun logout() {
         val url = currentServerUrl ?: return
         try {
-            val api = RetrofitProvider.createApi(url)
+            val api = RetrofitProvider.createApi(url, context)
             api.logout()
         } catch (e: Exception) {
             Timber.w(e, "Logout request failed (non-fatal)")
         }
+        clearCookiesForServer(url)
+        RetrofitProvider.invalidate()
         _state.value = AuthState.LoggedOut(url)
     }
 
@@ -140,13 +152,21 @@ class AuthManager private constructor(private val context: Context) {
         ServerRegistry.addServer(serverUrl, null, context)
         CustomHeaderStore.configure(serverUrl, context)
         _state.value = AuthState.LoggedIn(serverUrl)
+        _error.value = null
+    }
+
+    fun handleSessionExpired() {
+        val url = currentServerUrl ?: return
+        clearCookiesForServer(url)
+        RetrofitProvider.invalidate()
+        _state.value = AuthState.LoggedOut(url)
+        _error.value = SessionExpiredMessage
     }
 
     fun handleAPIError(error: APIError) {
         when (error) {
             is APIError.Unauthorized -> {
-                val url = currentServerUrl ?: return
-                _state.value = AuthState.LoggedOut(url)
+                handleSessionExpired()
             }
             else -> {
                 _error.value = error.message
@@ -156,6 +176,15 @@ class AuthManager private constructor(private val context: Context) {
 
     fun clearError() {
         _error.value = null
+    }
+
+    private fun clearCookiesForServer(serverUrl: String) {
+        try {
+            val host = URI(RetrofitProvider.normalizeUrl(serverUrl)).host ?: return
+            PersistentCookieJar(context).clearForHost(host)
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to clear cookies for server")
+        }
     }
 
     private fun wrapError(e: Exception): Exception {
