@@ -18,9 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hermex.app.data.api.RetrofitProvider
 import com.hermex.app.data.auth.AuthManager
+import com.hermex.app.data.auth.AuthManager.Companion.getInstance
 import com.hermex.app.data.auth.CustomHeaderStore
 import com.hermex.app.data.auth.ServerRegistry
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,7 +30,8 @@ fun SettingsScreen(
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
-    val authManager = remember { AuthManager(context) }
+    val authManager = getInstance(context)
+    val coroutineScope = rememberCoroutineScope()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -209,7 +210,7 @@ fun SettingsScreen(
                     TextButton(
                     onClick = {
                         showLogoutDialog = false
-                        MainScope().launch {
+                        coroutineScope.launch {
                             authManager.logout()
                             RetrofitProvider.invalidate()
                             onLogout()

@@ -10,7 +10,11 @@ import com.hermex.app.data.model.LoginResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import retrofit2.HttpException
 import timber.log.Timber
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 sealed class AuthState {
     data object Unconfigured : AuthState()
@@ -18,7 +22,18 @@ sealed class AuthState {
     data class LoggedIn(val serverUrl: String) : AuthState()
 }
 
-class AuthManager(private val context: Context) {
+class AuthManager private constructor(private val context: Context) {
+
+    companion object {
+        @Volatile
+        private var instance: AuthManager? = null
+
+        fun getInstance(context: Context): AuthManager {
+            return instance ?: synchronized(this) {
+                instance ?: AuthManager(context.applicationContext).also { instance = it }
+            }
+        }
+    }
 
     private val _state = MutableStateFlow<AuthState>(AuthState.Unconfigured)
     val state: StateFlow<AuthState> = _state.asStateFlow()
@@ -123,11 +138,18 @@ class AuthManager(private val context: Context) {
     }
 
     private fun wrapError(e: Exception): Exception {
-        return when {
-            e.message?.contains("401") == true -> APIError.Unauthorized
-            e.message?.contains("404") == true -> APIError.Http(404)
-            e.message?.contains("timeout", ignoreCase = true) == true ->
-                APIError.Network(e)
+        return when (e) {
+            is HttpException -> when (e.code()) {
+                401 -> APIError.Unauthorized
+                403 -> APIError.Http(403)
+                404 -> APIError.Http(404)
+                500 -> APIError.Http(500)
+                502, 503, 504 -> APIError.Http(e.code())
+                else -> APIError.Http(e.code())
+            }
+            is SocketTimeoutException -> APIError.Network(e)
+            is ConnectException -> APIError.Network(e)
+            is UnknownHostException -> APIError.Network(e)
             else -> APIError.Network(e)
         }
     }

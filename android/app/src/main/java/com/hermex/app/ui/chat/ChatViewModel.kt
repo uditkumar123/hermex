@@ -33,22 +33,20 @@ class ChatViewModel(
     private val sessionId: String
 ) : AndroidViewModel(application) {
 
-    private val authManager = AuthManager(application)
+    private val authManager = AuthManager.getInstance(application)
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    private val sessionRepo: SessionRepository?
-        get() {
-            val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
-            return url?.let { SessionRepository(it) }
-        }
+    private val sessionRepo: SessionRepository? by lazy {
+        val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
+        url?.let { SessionRepository(it) }
+    }
 
-    private val chatRepo: ChatRepository?
-        get() {
-            val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
-            return url?.let { ChatRepository(it) }
-        }
+    private val chatRepo: ChatRepository? by lazy {
+        val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
+        url?.let { ChatRepository(it) }
+    }
 
     private var streamJob: Job? = null
     private var currentModel: String? = null

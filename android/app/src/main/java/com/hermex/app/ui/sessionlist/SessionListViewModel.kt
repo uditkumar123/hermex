@@ -28,16 +28,15 @@ data class SessionListUiState(
 
 class SessionListViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val authManager = AuthManager(application)
+    private val authManager = AuthManager.getInstance(application)
 
     private val _uiState = MutableStateFlow(SessionListUiState())
     val uiState: StateFlow<SessionListUiState> = _uiState.asStateFlow()
 
-    private val repository: SessionRepository?
-        get() {
-            val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
-            return url?.let { SessionRepository(it, getApplication()) }
-        }
+    private val repository: SessionRepository? by lazy {
+        val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
+        url?.let { SessionRepository(it, getApplication()) }
+    }
 
     init {
         authManager.initialize()

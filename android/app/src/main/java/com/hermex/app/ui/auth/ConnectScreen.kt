@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.hermex.app.data.api.RetrofitProvider
 import com.hermex.app.data.auth.AuthManager
+import com.hermex.app.data.auth.AuthManager.Companion.getInstance
 import com.hermex.app.ui.theme.HermexBlue
 import com.hermex.app.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
@@ -37,7 +38,7 @@ fun ConnectScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val authManager = remember { AuthManager(context) }
+    val authManager = remember { getInstance(context) }
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 

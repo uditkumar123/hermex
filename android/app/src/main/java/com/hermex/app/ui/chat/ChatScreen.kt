@@ -28,7 +28,8 @@ fun ChatScreen(
     onBack: () -> Unit,
     viewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(
-            context = LocalContext.current.applicationContext as android.app.Application,
+            context = (LocalContext.current.applicationContext as? android.app.Application)
+                ?: error("Application context required for ViewModel"),
             sessionId = sessionId
         )
     )

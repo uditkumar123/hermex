@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
-    val authManager = AuthManager(application)
+    val authManager = AuthManager.getInstance(application)
 
     val authState = authManager.state.stateIn(
         viewModelScope,
