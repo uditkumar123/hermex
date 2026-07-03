@@ -1,6 +1,7 @@
 package com.hermex.app.data.auth
 
 import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.hermex.app.data.model.APIError
 import io.mockk.every
 import io.mockk.mockk
@@ -9,11 +10,14 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import retrofit2.HttpException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
+@RunWith(RobolectricTestRunner::class)
 class AuthManagerTest {
 
     private lateinit var context: Context
@@ -21,7 +25,7 @@ class AuthManagerTest {
 
     @Before
     fun setUp() {
-        context = mockk(relaxed = true)
+        context = ApplicationProvider.getApplicationContext()
         authManager = AuthManager.getInstance(context)
     }
 
