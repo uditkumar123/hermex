@@ -37,10 +37,12 @@ jobs:
         elif echo "$COMMIT_MSG" | grep -q "^feat:"; then
           echo "type=minor" >> $GITHUB_OUTPUT
         else
-          echo "type=patch" >> $GITHUB_OUTPUT
+          echo "No version-affecting commit detected — skipping."
+          echo "type=skip" >> $GITHUB_OUTPUT
         fi
 
     - name: Bump version
+      if: steps.bump.outputs.type != 'skip'
       id: version
       run: |
         # Read current version from build.gradle.kts
@@ -81,6 +83,7 @@ jobs:
         sed -i "s/versionName = \"$VERSION_NAME\"/versionName = \"$NEW_VERSION\"/" android/app/build.gradle.kts
 
     - name: Commit version bump
+      if: steps.bump.outputs.type != 'skip'
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -90,10 +93,12 @@ jobs:
         git push
 
     - name: Build APK
+      if: steps.bump.outputs.type != 'skip'
       working-directory: android
       run: ./gradlew assembleRelease --no-daemon
 
     - name: Create GitHub Release
+      if: steps.bump.outputs.type != 'skip'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.new_version }}
