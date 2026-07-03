@@ -57,3 +57,19 @@ fastlane/test_output/
 
 # Local session-handoff state (read at session start, overwritten at wrap-up; not tracked)
 /CURRENT.md
+/.agent
+/.codex
+run-update-ecc-all.bat
+update-ecc.ps1
+/.ecc-backups
+.planning/ROADMAP.md
+.planning/STATE.md
+AGENTS.md
+
+# Android
+android/local.properties
+android/app/build/
+android/.gradle/
+android/build/
+*.apk
+*.aab
