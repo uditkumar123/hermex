@@ -158,16 +158,21 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
     private val cookieStore = mutableMapOf<String, MutableList<Cookie>>()
     private val prefs by lazy {
         context?.let { ctx ->
-            val masterKeyAlias = androidx.security.crypto.MasterKeys.getOrCreate(
-                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-            )
-            androidx.security.crypto.EncryptedSharedPreferences.create(
-                "hermex_cookies_encrypted",
-                masterKeyAlias,
-                ctx,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
+            try {
+                val masterKeyAlias = androidx.security.crypto.MasterKeys.getOrCreate(
+                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+                )
+                androidx.security.crypto.EncryptedSharedPreferences.create(
+                    "hermex_cookies_encrypted",
+                    masterKeyAlias,
+                    ctx,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } catch (e: Exception) {
+                Log.w("Hermex", "EncryptedSharedPreferences unavailable, falling back to plain storage", e)
+                ctx.getSharedPreferences("hermex_cookies", android.content.Context.MODE_PRIVATE)
+            }
         }
     }
 
