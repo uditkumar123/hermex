@@ -33,8 +33,7 @@ fun ToolCallCardView(
             .animateContentSize(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        border = CardDefaults.outlinedCardBorder().takeIf { false }
+        )
     ) {
         Column(
             modifier = Modifier.padding(12.dp)

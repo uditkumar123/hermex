@@ -38,14 +38,22 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
+    var selectedModel by remember { mutableStateOf<String?>(null) }
+    var selectedProvider by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(sessionId) {
         viewModel.loadMessages()
     }
 
     LaunchedEffect(uiState.messages.size, uiState.isStreaming) {
         if (uiState.messages.isNotEmpty()) {
-            coroutineScope.launch {
-                listState.animateScrollToItem(uiState.messages.size - 1)
+            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = listState.layoutInfo.totalItemsCount
+            val nearBottom = lastVisibleItem >= totalItems - 2
+            if (nearBottom || !uiState.isStreaming) {
+                coroutineScope.launch {
+                    listState.animateScrollToItem(uiState.messages.size - 1)
+                }
             }
         }
     }
@@ -156,7 +164,10 @@ fun ChatScreen(
                             items = uiState.messages,
                             key = { it.messageId ?: it.hashCode().toString() }
                         ) { message ->
-                            MessageBubbleView(message = message)
+                            MessageBubbleView(
+                                message = message,
+                                isStreaming = uiState.isStreaming && message.role == "assistant" && message.messageId?.startsWith("streaming_") == true
+                            )
                         }
 
                         // Live tool calls
@@ -196,7 +207,13 @@ fun ChatScreen(
                 isSending = uiState.isSending,
                 onSend = { viewModel.sendMessage(it) },
                 onCancel = { viewModel.cancelStream() },
-                onSteer = { viewModel.steerChat(it) }
+                onSteer = { viewModel.steerChat(it) },
+                currentModel = selectedModel,
+                currentProvider = selectedProvider,
+                onModelChange = { model, provider ->
+                    selectedModel = model
+                    selectedProvider = provider
+                }
             )
         }
     }

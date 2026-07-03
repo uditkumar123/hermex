@@ -1,26 +1,39 @@
 package com.hermex.app.ui.chat
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.hermex.app.data.model.ChatMessage
 import com.hermex.app.ui.theme.*
 import com.hermex.app.util.toRelativeTime
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageBubbleView(
     message: ChatMessage,
+    isStreaming: Boolean = false,
+    onRegenerate: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isUser = message.isUser
+    val context = LocalContext.current
+    var showContextMenu by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -46,11 +59,18 @@ fun MessageBubbleView(
                         MaterialTheme.colorScheme.surfaceVariant
                     }
                 )
+                .combinedClickable(
+                    onClick = { },
+                    onLongClick = { showContextMenu = true }
+                )
                 .padding(12.dp)
         ) {
             Column {
                 if (message.hasReasoning && message.reasoning != null) {
-                    ReasoningBlock(reasoning = message.reasoning)
+                    ReasoningBlock(
+                        reasoning = message.reasoning,
+                        isStreaming = isStreaming
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
@@ -81,6 +101,28 @@ fun MessageBubbleView(
                     }
                 }
             }
+
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Copy") },
+                    onClick = {
+                        copyToClipboard(context, message.displayContent)
+                        showContextMenu = false
+                    }
+                )
+                if (!isUser && onRegenerate != null) {
+                    DropdownMenuItem(
+                        text = { Text("Regenerate") },
+                        onClick = {
+                            onRegenerate()
+                            showContextMenu = false
+                        }
+                    )
+                }
+            }
         }
 
         if (message.displayTimestamp > 0) {
@@ -94,8 +136,16 @@ fun MessageBubbleView(
     }
 }
 
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("message", text))
+}
+
 @Composable
-private fun ReasoningBlock(reasoning: String) {
+private fun ReasoningBlock(
+    reasoning: String,
+    isStreaming: Boolean = false
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -104,7 +154,7 @@ private fun ReasoningBlock(reasoning: String) {
             .padding(8.dp)
     ) {
         Text(
-            text = "Thinking...",
+            text = if (isStreaming) "Thinking..." else "Thought",
             style = MaterialTheme.typography.labelSmall,
             color = ReasoningBorder
         )

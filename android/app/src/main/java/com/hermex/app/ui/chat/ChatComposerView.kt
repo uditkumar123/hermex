@@ -22,10 +22,14 @@ fun ChatComposerView(
     onSend: (String) -> Unit,
     onCancel: () -> Unit,
     onSteer: ((String) -> Unit)? = null,
+    currentModel: String? = null,
+    currentProvider: String? = null,
+    onModelChange: ((model: String?, provider: String?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var inputText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    var showModelPicker by remember { mutableStateOf(false) }
 
     val canSend = inputText.isNotBlank() && !isStreaming && !isSending
     val canSteer = inputText.isNotBlank() && isStreaming && onSteer != null
@@ -37,6 +41,60 @@ fun ChatComposerView(
         Column(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
+            if (onModelChange != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilterChip(
+                        selected = showModelPicker,
+                        onClick = { showModelPicker = !showModelPicker },
+                        label = {
+                            Text(
+                                text = currentModel?.take(20) ?: "Model",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    )
+                    if (currentProvider != null) {
+                        Text(
+                            text = currentProvider,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                if (showModelPicker) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = currentModel ?: "",
+                            onValueChange = { newModel ->
+                                onModelChange(newModel.ifBlank { null }, currentProvider)
+                            },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("Model name") },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = currentProvider ?: "",
+                            onValueChange = { newProvider ->
+                                onModelChange(currentModel, newProvider.ifBlank { null })
+                            },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("Provider") },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+
             if (isStreaming) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
