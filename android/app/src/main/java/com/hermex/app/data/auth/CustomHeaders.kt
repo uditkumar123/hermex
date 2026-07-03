@@ -2,8 +2,6 @@ package com.hermex.app.data.auth
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.hermex.app.data.model.CustomHeader
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
