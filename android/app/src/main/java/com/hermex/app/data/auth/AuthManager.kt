@@ -7,10 +7,13 @@ import com.hermex.app.data.model.APIError
 import com.hermex.app.data.model.AuthStatusResponse
 import com.hermex.app.data.model.HealthResponse
 import com.hermex.app.data.model.LoginResponse
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
+import okhttp3.Request
 import retrofit2.HttpException
 import timber.log.Timber
 import java.net.ConnectException
@@ -62,13 +65,29 @@ class AuthManager private constructor(private val context: Context) {
     }
 
     suspend fun testConnection(serverUrl: String): Result<HealthResponse> {
-        return try {
-            val api = RetrofitProvider.createApi(serverUrl)
-            val response = api.health()
-            Result.success(response)
-        } catch (e: Exception) {
-            Timber.e(e, "Connection test failed")
-            Result.failure(wrapError(e))
+        return withContext(Dispatchers.IO) {
+            try {
+                val normalizedUrl = RetrofitProvider.normalizeUrl(serverUrl)
+                val healthUrl = if (normalizedUrl.endsWith("/")) "${normalizedUrl}health" else "$normalizedUrl/health"
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .followRedirects(false)
+                    .build()
+                val request = Request.Builder()
+                    .url(healthUrl)
+                    .head()
+                    .build()
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful || response.code in 301..399) {
+                    Result.success(HealthResponse())
+                } else {
+                    Result.failure(APIError.Http(response.code))
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Connection test failed")
+                Result.failure(wrapError(e))
+            }
         }
     }
 

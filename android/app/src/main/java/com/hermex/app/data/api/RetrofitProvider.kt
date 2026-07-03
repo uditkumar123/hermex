@@ -118,7 +118,7 @@ object RetrofitProvider {
         currentRetrofit = null
     }
 
-    private fun normalizeUrl(url: String): String {
+    fun normalizeUrl(url: String): String {
         var normalized = url.trim()
         if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
             normalized = "https://$normalized"
