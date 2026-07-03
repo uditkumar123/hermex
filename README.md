@@ -7,7 +7,8 @@
 Your server. Your phone. No middleman.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
-[![Android](https://img.shields.io/badge/Android-8%2B-3DDC84?logo=android&logoColor=white)](https://github.com/uzairansaruzi/hermex/releases)
+[![Android APK](https://img.shields.io/badge/APK-free-brightgreen?logo=android)](https://github.com/uzairansaruzi/hermex/releases)
+[![Google Play](https://img.shields.io/badge/Google_Play-$1.99-3DDC84?logo=googleplay)](https://play.google.com/store/apps/details?id=com.hermex.app)
 [![iOS](https://img.shields.io/badge/iOS-18%2B-000000?logo=apple&logoColor=white)](https://apps.apple.com/app/hermex/id6767006319)
 
 [Report a bug](https://github.com/uzairansaruzi/hermex/issues) · [Contributing](CONTRIBUTING.md)
@@ -16,16 +17,17 @@ Your server. Your phone. No middleman.
 
 Hermex is a native mobile client for driving a self-hosted [hermes-webui](https://github.com/nesquena/hermes-webui) server — a mobile cockpit for an AI agent that lives on a machine **you** control. The phone is the control plane, not the compute plane: the agent, its tools, and your data stay on your own hardware.
 
-- **$1.99 on Google Play.** No subscriptions, no ads — just a one-time purchase.
 - **Private.** No analytics, no tracking, no third-party relay — the app talks only to your server.
 - **Native.** Built with platform-native UI (SwiftUI for iOS, Jetpack Compose for Android).
+- **Free APK on GitHub** — sideload for free. **$1.99 on Google Play** — supports development. No subscriptions, no ads.
 
 ## Platforms
 
-| Platform | Status | Min Version |
-|----------|--------|-------------|
-| iOS | ✅ App Store | iOS 18+ |
-| Android | ✅ APK Available | Android 8.0+ (API 26) |
+| Platform | Channel | Price | Min Version |
+|----------|---------|-------|-------------|
+| iOS | App Store | Free | iOS 18+ |
+| Android | Google Play | $1.99 | Android 8.0+ (API 26) |
+| Android | GitHub (APK) | Free | Android 8.0+ (API 26) |
 
 ## Features
 
@@ -52,8 +54,8 @@ Install and start `hermes-webui` on macOS, Linux, or Windows/WSL2 (Python 3.11+)
 
 ### 3. Connect
 
-**Android:** [Download the APK](https://github.com/uzairansaruzi/hermex/releases) from GitHub Releases.
-
+**Android (free):** [Download the APK](https://github.com/uzairansaruzi/hermex/releases) from GitHub Releases.
+**Android (paid):** [Get it on Google Play](https://play.google.com/store/apps/details?id=com.hermex.app) for $1.99 — supports development.
 **iOS:** [Download from the App Store](https://apps.apple.com/app/hermex/id6767006319).
 
 Enter your server URL (e.g. `https://hermes.yourdomain.com`) and password, and you're in.
