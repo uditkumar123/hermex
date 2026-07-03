@@ -11,15 +11,18 @@ import com.hermex.app.ui.auth.OnboardingScreen
 import com.hermex.app.ui.auth.SettingsScreen
 import com.hermex.app.ui.chat.ChatScreen
 import com.hermex.app.ui.sessionlist.SessionListScreen
+import com.hermex.app.ui.workspace.FileBrowserScreen
 
 object Routes {
     const val ONBOARDING = "onboarding"
     const val CONNECT = "connect"
     const val SESSION_LIST = "session_list"
     const val CHAT = "chat/{sessionId}"
+    const val FILE_BROWSER = "file_browser/{sessionId}"
     const val SETTINGS = "settings"
 
     fun chat(sessionId: String) = "chat/$sessionId"
+    fun fileBrowser(sessionId: String) = "file_browser/$sessionId"
 }
 
 @Composable
@@ -70,6 +73,20 @@ fun HermexNavGraph() {
             ChatScreen(
                 sessionId = sessionId,
                 onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Routes.FILE_BROWSER,
+            arguments = listOf(navArgument("sessionId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: return@composable
+            FileBrowserScreen(
+                sessionId = sessionId,
+                onBack = { navController.popBackStack() },
+                onClose = {
                     navController.popBackStack()
                 }
             )

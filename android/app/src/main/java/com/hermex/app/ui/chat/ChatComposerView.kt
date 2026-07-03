@@ -95,6 +95,14 @@ fun ChatComposerView(
                 }
             }
 
+            SlashCommandDropdown(
+                query = inputText,
+                onSelect = { command ->
+                    inputText = "$command "
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             if (isStreaming) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

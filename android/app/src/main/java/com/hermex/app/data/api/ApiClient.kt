@@ -136,6 +136,18 @@ interface HermesApi {
     @GET("/api/workspaces/suggest")
     suspend fun workspaceSuggestions(@Query("prefix") prefix: String): WorkspaceSuggestionsResponse
 
+    @GET("/api/list")
+    suspend fun listFiles(
+        @Query("session_id") sessionId: String,
+        @Query("path") path: String? = null
+    ): FileListResponse
+
+    @GET("/api/file")
+    suspend fun getFile(
+        @Query("session_id") sessionId: String,
+        @Query("path") path: String
+    ): FileContentResponse
+
     // ── Profiles ───────────────────────────────────────────────────
 
     @GET("/api/profiles")

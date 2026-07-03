@@ -211,3 +211,28 @@ data class WorkspacesResponse(
 data class WorkspaceSuggestionsResponse(
     val suggestions: List<String>? = null
 )
+
+@Serializable
+data class FileListResponse(
+    val files: List<FileEntry>? = null,
+    @SerialName("current_path") val currentPath: String? = null
+)
+
+@Serializable
+data class FileEntry(
+    val name: String? = null,
+    val path: String? = null,
+    @SerialName("is_dir") val isDir: Boolean? = null,
+    val size: Long? = null,
+    val modified: Double? = null
+)
+
+@Serializable
+data class FileContentResponse(
+    val content: String? = null,
+    val name: String? = null,
+    val path: String? = null,
+    val size: Long? = null,
+    @SerialName("is_binary") val isBinary: Boolean? = null,
+    val language: String? = null
+)
