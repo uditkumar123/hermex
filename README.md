@@ -1,10 +1,10 @@
 <div align="center">
 
-# Hermex
+# Hermes Companion
 
-**Control your self-hosted [Hermes](https://github.com/nesquena/hermes-webui) agent from your phone.**
+**A native mobile client for your self-hosted Hermes WebUI server.**
 
-Your server. Your phone. No middleman.
+Your phone becomes the control plane for your AI agent — the agent, its tools, and your data stay on your own hardware.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 [![Android APK](https://img.shields.io/badge/APK-free-brightgreen?logo=android)](https://github.com/uditkumar123/hermex/releases)
@@ -15,11 +15,18 @@ Your server. Your phone. No middleman.
 
 </div>
 
-Hermex is a native mobile client for driving a self-hosted [hermes-webui](https://github.com/nesquena/hermes-webui) server — a mobile cockpit for an AI agent that lives on a machine **you** control. The phone is the control plane, not the compute plane: the agent, its tools, and your data stay on your own hardware.
+## Features
 
-- **Private.** No analytics, no tracking, no third-party relay — the app talks only to your server.
-- **Native.** Built with platform-native UI (SwiftUI for iOS, Jetpack Compose for Android).
-- **Free APK on GitHub** — sideload for free. **$1.99 on Google Play** — supports development. No subscriptions, no ads.
+- **Chat with your agent** — send messages with model, workspace, and profile controls; watch responses stream in real time with thinking and tool-call detail.
+- **Sessions** — browse, search, and resume every conversation on your server. Cached sessions stay readable offline.
+- **Steer or stop runs** mid-flight.
+- **Switch models, profiles, and projects** on the fly.
+- **Private by design** — no accounts, no tracking, no analytics. The app talks only to your server.
+
+## Requirements
+
+- A running [Hermes WebUI](https://github.com/nesquena/hermes-webui) server (self-hosted on your own machine or VPS).
+- Your server must be reachable from your phone via HTTPS, Tailscale, or local network.
 
 ## Platforms
 
@@ -29,18 +36,7 @@ Hermex is a native mobile client for driving a self-hosted [hermes-webui](https:
 | Android | Google Play | $1.99 | Android 8.0+ (API 26) |
 | Android | GitHub (APK) | Free | Android 8.0+ (API 26) |
 
-## Features
-
-- **Chat with your agent** — send messages with model, workspace, and profile options; watch responses stream in real time with thinking and tool-call detail.
-- **Steer or stop a run** mid-flight.
-- **Sessions** — browse, search, and resume every conversation on your server; cached sessions stay readable offline.
-- **Pick your models** — switch between any model or provider your server is configured for.
-- **Profiles & projects** — switch agent profiles and organize sessions into projects.
-- **Offline support** — view cached sessions when disconnected from your server.
-
 ## Getting started
-
-Hermex is a client only — it does not ship with, host, or provision a backend. You bring your own [hermes-webui](https://github.com/nesquena/hermes-webui) server running on a machine you control.
 
 ### 1. Run the server
 
@@ -50,7 +46,7 @@ Install and start `hermes-webui` on macOS, Linux, or Windows/WSL2 (Python 3.11+)
 
 - **HTTPS via a tunnel or reverse proxy (recommended).** Expose the server through Cloudflare Tunnel or any reverse proxy that terminates real TLS at a hostname you own.
 - **Tailscale.** Run the server bound to all interfaces with a password, install Tailscale on both the server and your phone, and connect via the Tailscale IP.
-- **Local testing** can use `http://localhost:8787` when the server runs on the same machine.
+- **Local network.** Use `http://` for devices on the same LAN or Tailscale network.
 
 ### 3. Connect
 
@@ -58,7 +54,7 @@ Install and start `hermes-webui` on macOS, Linux, or Windows/WSL2 (Python 3.11+)
 **Android (paid):** [Get it on Google Play](https://play.google.com/store/apps/details?id=com.hermex.app) for $1.99 — supports development.
 **iOS:** [Download from the App Store](https://apps.apple.com/app/hermex/id6767006319).
 
-Enter your server URL (e.g. `https://hermes.yourdomain.com`) and password, and you're in.
+Enter your server URL and password, and you're in.
 
 ## Building from source
 
@@ -92,10 +88,6 @@ Requirements:
 xcodebuild -project HermesMobile.xcodeproj -scheme HermesMobile -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
-## Server compatibility
-
-The app is developed and tested against the `hermes-webui` upstream. The app decodes tolerantly (unknown fields never crash it) and endpoint shapes are verified against upstream source.
-
 ## Automation
 
 - **Pre-commit hook** — verifies Android build passes before commits
@@ -115,4 +107,4 @@ Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for how t
 
 MIT — see [LICENSE](LICENSE).
 
-Hermex is an independent client and is not affiliated with the upstream [hermes-webui](https://github.com/nesquena/hermes-webui) project.
+Hermes Companion is an independent client and is not affiliated with the upstream [hermes-webui](https://github.com/nesquena/hermes-webui) project.

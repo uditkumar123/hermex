@@ -12,6 +12,7 @@ android/gradlew.bat
 *.aab
 *.jks
 *.keystore
+!android/debug.keystore
 
 # ---------- Secrets ----------
 .env

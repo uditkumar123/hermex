@@ -20,6 +20,12 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            storeFile = file("../debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             storeFile = file("../play-keystore.jks")
             storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "notset"
@@ -29,6 +35,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

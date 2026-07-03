@@ -118,6 +118,19 @@ object RetrofitProvider {
         currentRetrofit = null
     }
 
+    fun warmupSession(baseUrl: String, context: android.content.Context? = null) {
+        try {
+            val normalizedUrl = normalizeUrl(baseUrl)
+            val client = getOrCreate(baseUrl, context).callFactory() as OkHttpClient
+            val request = okhttp3.Request.Builder()
+                .url(normalizedUrl)
+                .get()
+                .header("Accept", "text/html,application/json")
+                .build()
+            client.newCall(request).execute().close()
+        } catch (_: Exception) { }
+    }
+
     fun normalizeUrl(url: String): String {
         var normalized = url.trim()
         if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {

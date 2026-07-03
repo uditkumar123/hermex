@@ -105,6 +105,7 @@ class AuthManager private constructor(private val context: Context) {
         _isLoading.value = true
         _error.value = null
         return try {
+            RetrofitProvider.warmupSession(serverUrl, context)
             val api = RetrofitProvider.createApi(serverUrl)
             val response = api.login(LoginRequest(password))
             if (response.isSuccess) {
