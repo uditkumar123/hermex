@@ -36,6 +36,8 @@ jobs:
           echo "type=major" >> $GITHUB_OUTPUT
         elif echo "$COMMIT_MSG" | grep -q "^feat:"; then
           echo "type=minor" >> $GITHUB_OUTPUT
+        elif echo "$COMMIT_MSG" | grep -qE "^(fix|perf):"; then
+          echo "type=patch" >> $GITHUB_OUTPUT
         else
           echo "No version-affecting commit detected — skipping."
           echo "type=skip" >> $GITHUB_OUTPUT
@@ -95,7 +97,7 @@ jobs:
     - name: Build APK
       if: steps.bump.outputs.type != 'skip'
       working-directory: android
-      run: ./gradlew assembleRelease --no-daemon
+      run: ./gradlew assembleDebug --no-daemon
 
     - name: Create GitHub Release
       if: steps.bump.outputs.type != 'skip'
@@ -105,6 +107,6 @@ jobs:
         name: v${{ steps.version.outputs.new_version }}
         generate_release_notes: true
         files: |
-          android/app/build/outputs/apk/release/app-release-unsigned.apk
+          android/app/build/outputs/apk/debug/app-debug.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
