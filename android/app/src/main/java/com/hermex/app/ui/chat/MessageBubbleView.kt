@@ -3,6 +3,7 @@ package com.hermex.app.ui.chat
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.widget.TextView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -16,12 +17,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.hermex.app.data.model.ChatMessage
 import com.hermex.app.ui.theme.*
 import com.hermex.app.util.toRelativeTime
+import io.noties.markwon.Markwon
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -75,13 +79,25 @@ fun MessageBubbleView(
                 }
 
                 if (message.displayContent.isNotEmpty()) {
-                    Text(
-                        text = message.displayContent,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (isUser) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
+                    val markwon = remember { Markwon.create(context) }
+                    val spannable = remember(message.displayContent) {
+                        markwon.toMarkdown(message.displayContent)
+                    }
+                    val textColor = if (isUser) {
+                        MaterialTheme.colorScheme.onPrimary.toArgb()
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.toArgb()
+                    }
+                    AndroidView(
+                        factory = { ctx ->
+                            TextView(ctx).apply {
+                                setTextColor(textColor)
+                                textSize = 16f
+                            }
+                        },
+                        update = { tv ->
+                            tv.setTextColor(textColor)
+                            markwon.setParsedMarkdown(tv, spannable)
                         }
                     )
                 }
