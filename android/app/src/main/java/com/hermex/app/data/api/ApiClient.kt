@@ -148,6 +148,13 @@ interface HermesApi {
         @Query("path") path: String
     ): FileContentResponse
 
+    @Streaming
+    @GET("/api/file")
+    suspend fun getFileStream(
+        @Query("session_id") sessionId: String,
+        @Query("path") path: String
+    ): okhttp3.ResponseBody
+
     // ── Profiles ───────────────────────────────────────────────────
 
     @GET("/api/profiles")

@@ -1,9 +1,11 @@
 package com.hermex.app.ui.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -13,12 +15,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hermex.app.data.auth.AuthManager
+import com.hermex.app.data.auth.AuthState
 import com.hermex.app.data.model.ApprovalPendingResponse
 import com.hermex.app.data.model.ChatMessage
 import com.hermex.app.data.model.ClarificationPendingResponse
+import com.hermex.app.data.model.ConnectionState
 import com.hermex.app.data.model.ContextWindowSnapshot
 import com.hermex.app.ui.theme.HermexBlue
 import kotlinx.coroutines.launch
@@ -41,6 +48,8 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val authState by AuthManager.getInstance(LocalContext.current).state.collectAsState()
+    val serverUrl = (authState as? AuthState.LoggedIn)?.serverUrl
 
     var selectedModel by remember { mutableStateOf<String?>(null) }
     var selectedProvider by remember { mutableStateOf<String?>(null) }
@@ -66,18 +75,47 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = uiState.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when (uiState.connectionState) {
+                                        ConnectionState.Connected -> Color(0xFF4CAF50)
+                                        ConnectionState.Reconnecting -> Color(0xFFFFC107)
+                                        ConnectionState.Disconnected -> Color(0xFFF44336)
+                                    }
+                                )
                         )
-                        if (uiState.isStreaming) {
+                        Spacer(Modifier.width(8.dp))
+                        Column {
                             Text(
-                                text = "Streaming...",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = HermexBlue
+                                text = uiState.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1
                             )
+                            when (uiState.connectionState) {
+                                ConnectionState.Reconnecting -> Text(
+                                    text = "Reconnecting...",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFFFFC107)
+                                )
+                                ConnectionState.Disconnected -> Text(
+                                    text = "Disconnected",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFFF44336)
+                                )
+                                else -> {
+                                    if (uiState.isStreaming) {
+                                        Text(
+                                            text = "Streaming...",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = HermexBlue
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 },
@@ -178,7 +216,9 @@ fun ChatScreen(
                         ) { message ->
                             MessageBubbleView(
                                 message = message,
-                                isStreaming = uiState.isStreaming && message.role == "assistant" && message.messageId?.startsWith("streaming_") == true
+                                isStreaming = uiState.isStreaming && message.role == "assistant" && message.messageId?.startsWith("streaming_") == true,
+                                sessionId = sessionId,
+                                serverUrl = serverUrl
                             )
                         }
 

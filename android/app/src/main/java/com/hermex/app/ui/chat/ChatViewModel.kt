@@ -8,6 +8,7 @@ import com.hermex.app.data.auth.AuthManager
 import com.hermex.app.data.auth.AuthState
 import com.hermex.app.data.model.*
 import com.hermex.app.data.repository.ChatRepository
+import com.hermex.app.data.repository.OfflineMessageRepository
 import com.hermex.app.data.repository.SessionRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
@@ -21,6 +22,7 @@ data class ChatUiState(
     val errorMessage: String? = null,
     val title: String = "Chat",
     val activeStreamId: String? = null,
+    val connectionState: ConnectionState = ConnectionState.Connected,
     val liveReasoningText: String = "",
     val liveToolCalls: List<ToolStreamEvent> = emptyList(),
     val contextWindow: ContextWindowSnapshot? = null,
@@ -47,6 +49,8 @@ class ChatViewModel(
         val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl
         url?.let { ChatRepository(it, getApplication()) }
     }
+
+    private val cacheRepo by lazy { OfflineMessageRepository(getApplication()) }
 
     private var streamJob: Job? = null
     private var currentModel: String? = null
@@ -90,11 +94,21 @@ class ChatViewModel(
                     }
                 },
                 onFailure = { e ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = e.message
-                        )
+                    val cached = cacheRepo.getMessages(sessionId)
+                    if (cached.isNotEmpty()) {
+                        _uiState.update {
+                            it.copy(
+                                messages = cached,
+                                isLoading = false
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = e.message
+                            )
+                        }
                     }
                 }
             )
@@ -110,26 +124,7 @@ class ChatViewModel(
             if (resolved != null) {
                 val commandName = resolved.second["command"] ?: ""
                 val commandArgs = resolved.second["args"]?.trim().orEmpty()
-
-                when (commandName) {
-                    "steer" -> {
-                        if (commandArgs.isEmpty()) {
-                            _uiState.update { it.copy(errorMessage = "Usage: /steer <text>") }
-                            return
-                        }
-                        steerChat(commandArgs)
-                        return
-                    }
-                    "interrupt" -> {
-                        cancelStream()
-                        return
-                    }
-                }
-
-                if (slashCommands.none { it.name == commandName }) {
-                    _uiState.update { it.copy(errorMessage = "Unknown command: /$commandName") }
-                    return
-                }
+                if (dispatchSlashCommand(commandName, commandArgs)) return
             }
         }
 
@@ -194,6 +189,221 @@ class ChatViewModel(
         }
     }
 
+    private fun dispatchSlashCommand(commandName: String, args: String): Boolean {
+        when (commandName) {
+            "steer" -> {
+                if (args.isEmpty()) {
+                    _uiState.update { it.copy(errorMessage = "Usage: /steer <text>") }
+                } else {
+                    steerChat(args)
+                }
+                return true
+            }
+            "interrupt" -> {
+                cancelStream()
+                return true
+            }
+        }
+
+        if (slashCommands.none { it.name == commandName }) {
+            _uiState.update { it.copy(errorMessage = "Unknown command: /$commandName") }
+            return true
+        }
+
+        when (commandName) {
+            "help" -> addSystemMessage(formatHelpText())
+            "status" -> dispatchStatus()
+            "queue" -> dispatchStatus("queue")
+            "title" -> if (args.isNotEmpty()) dispatchRename(args) else addSystemMessage("Usage: /title <text>")
+            "undo" -> dispatchUndo()
+            "retry" -> dispatchRetry()
+            "compress", "compact" -> dispatchCompress()
+            "model" -> if (args.isNotEmpty()) dispatchUpdate(model = args) else addSystemMessage("Usage: /model <name>")
+            "workspace" -> if (args.isNotEmpty()) dispatchUpdate(workspace = args) else addSystemMessage("Usage: /workspace <path>")
+            "personality" -> if (args.isNotEmpty()) dispatchPersonality(args) else addSystemMessage("Usage: /personality <name>")
+            "reasoning" -> dispatchReasoning(args)
+            "new" -> dispatchNewSession(args)
+            "skills" -> addSystemMessage("Open the Skills screen from the menu to view and manage skills.")
+            "btw" -> if (args.isNotEmpty()) dispatchBtw(args) else addSystemMessage("Usage: /btw <message>")
+            "background", "bg" -> if (args.isNotEmpty()) dispatchBackground(args) else addSystemMessage("Usage: /$commandName <message>")
+            "branch", "fork" -> dispatchBranch()
+            else -> addSystemMessage("Command /$commandName will be sent to the server.")
+        }
+        return true
+    }
+
+    private fun addSystemMessage(text: String) {
+        val msg = ChatMessage(
+            role = "system",
+            content = text,
+            timestamp = System.currentTimeMillis() / 1000.0,
+            messageId = "system_${System.currentTimeMillis()}"
+        )
+        _uiState.update { it.copy(messages = it.messages + msg) }
+    }
+
+    private fun formatHelpText(): String {
+        val byCategory = slashCommands.groupBy { it.category }
+        val sb = StringBuilder("**Available Commands**\n\n")
+        byCategory.forEach { (category, cmds) ->
+            sb.appendLine("**$category**")
+            cmds.forEach { cmd ->
+                sb.appendLine("- `${cmd.hint}` — ${cmd.description}")
+            }
+            sb.appendLine()
+        }
+        return sb.toString()
+    }
+
+    private fun dispatchStatus(mode: String = "status") {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.fetchSessionStatus(sessionId).fold(
+                onSuccess = { status ->
+                    val msg = buildString {
+                        appendLine("**${if (mode == "queue") "Queue" else "Session Status"}**")
+                        status.isStreaming?.let { appendLine("- Streaming: $it") }
+                        status.pendingUserMessage?.let { appendLine("- Pending message: $it") }
+                        status.activeStreamId?.let { appendLine("- Active stream: $it") }
+                    }
+                    addSystemMessage(msg.trimEnd())
+                },
+                onFailure = { addSystemMessage("Failed to fetch status: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchRename(title: String) {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.renameSession(sessionId, title).fold(
+                onSuccess = {
+                    _uiState.update { it.copy(title = title) }
+                    addSystemMessage("Session renamed to \"$title\".")
+                },
+                onFailure = { addSystemMessage("Failed to rename: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchUndo() {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.undoSession(sessionId).fold(
+                onSuccess = { addSystemMessage("Last assistant message undone."); loadMessages() },
+                onFailure = { addSystemMessage("Failed to undo: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchRetry() {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.retrySession(sessionId).fold(
+                onSuccess = { addSystemMessage("Retrying last response..."); loadMessages() },
+                onFailure = { addSystemMessage("Failed to retry: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchCompress() {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.compressSession(sessionId).fold(
+                onSuccess = { addSystemMessage("Context window compressed.") },
+                onFailure = { addSystemMessage("Failed to compress: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchUpdate(model: String? = null, workspace: String? = null) {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.updateSession(sessionId, model = model, workspace = workspace).fold(
+                onSuccess = {
+                    if (model != null) {
+                        currentModel = model
+                        addSystemMessage("Model switched to \"$model\".")
+                    }
+                    if (workspace != null) {
+                        currentWorkspace = workspace
+                        addSystemMessage("Workspace switched to \"$workspace\".")
+                    }
+                },
+                onFailure = { addSystemMessage("Failed to update: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchPersonality(name: String) {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.switchProfile(name).fold(
+                onSuccess = { currentProfile = name; addSystemMessage("Personality switched to \"$name\".") },
+                onFailure = { addSystemMessage("Failed to switch personality: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchReasoning(level: String) {
+        val valid = listOf("low", "medium", "high")
+        if (level.lowercase() !in valid) {
+            addSystemMessage("Usage: /reasoning <level> where level is one of: ${valid.joinToString(", ")}")
+            return
+        }
+        addSystemMessage("Reasoning set to \"$level\". This will apply on the next message.")
+    }
+
+    private fun dispatchNewSession(title: String) {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.createSession().fold(
+                onSuccess = { session ->
+                    val msg = if (title.isNotEmpty()) {
+                        repo.renameSession(session.sessionId ?: "", title)
+                        "New session created: \"$title\" (${session.sessionId}). Use the session list to switch."
+                    } else {
+                        "New session created (${session.sessionId}). Use the session list to switch."
+                    }
+                    addSystemMessage(msg)
+                },
+                onFailure = { addSystemMessage("Failed to create session: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchBtw(text: String) {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.sendBtw(sessionId, text).fold(
+                onSuccess = { addSystemMessage("Background message sent: \"$text\"") },
+                onFailure = { addSystemMessage("Failed to send btw: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchBackground(text: String) {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.backgroundStart(sessionId, text).fold(
+                onSuccess = { addSystemMessage("Background task started: \"$text\"") },
+                onFailure = { addSystemMessage("Failed to start background task: ${it.message}") }
+            )
+        }
+    }
+
+    private fun dispatchBranch() {
+        val repo = sessionRepo ?: run { addSystemMessage("Session repository not available."); return }
+        viewModelScope.launch {
+            repo.branchSession(sessionId).fold(
+                onSuccess = {
+                    addSystemMessage("Session branched. Use the session list to switch to the new branch.")
+                },
+                onFailure = { addSystemMessage("Failed to branch: ${it.message}") }
+            )
+        }
+    }
+
     private fun startStreaming(streamId: String) {
         val repo = chatRepo ?: return
         streamJob?.cancel()
@@ -203,119 +413,130 @@ class ChatViewModel(
             var accumulatedReasoning = ""
             val toolCalls = mutableListOf<ToolStreamEvent>()
 
-            repo.streamChat(streamId).collect { event ->
-                when (event) {
-                    is SSEEvent.Token -> {
-                        accumulatedText += event.text
-                        updateStreamingMessage(assistantMessageId, accumulatedText, accumulatedReasoning, toolCalls)
+            repo.streamChat(streamId).collect { streamEvent ->
+                when (streamEvent) {
+                    is SSEStreamEvent.StateChange -> {
+                        _uiState.update { it.copy(connectionState = streamEvent.state) }
                     }
+                    is SSEStreamEvent.Event -> {
+                        val event = streamEvent.event
+                        when (event) {
+                            is SSEEvent.Token -> {
+                                accumulatedText += event.text
+                                updateStreamingMessage(assistantMessageId, accumulatedText, accumulatedReasoning, toolCalls)
+                            }
 
-                    is SSEEvent.Reasoning -> {
-                        accumulatedReasoning += event.text
-                        _uiState.update { it.copy(liveReasoningText = accumulatedReasoning) }
-                    }
+                            is SSEEvent.Reasoning -> {
+                                accumulatedReasoning += event.text
+                                _uiState.update { it.copy(liveReasoningText = accumulatedReasoning) }
+                            }
 
-                    is SSEEvent.ToolStarted -> {
-                        toolCalls.add(event.event)
-                        _uiState.update { it.copy(liveToolCalls = toolCalls.toList()) }
-                    }
+                            is SSEEvent.ToolStarted -> {
+                                toolCalls.add(event.event)
+                                _uiState.update { it.copy(liveToolCalls = toolCalls.toList()) }
+                            }
 
-                    is SSEEvent.ToolCompleted -> {
-                        val idx = toolCalls.indexOfFirst { it.stableId == event.event.stableId }
-                        if (idx >= 0) {
-                            toolCalls[idx] = event.event
-                        } else {
-                            toolCalls.add(event.event)
+                            is SSEEvent.ToolCompleted -> {
+                                val idx = toolCalls.indexOfFirst { it.stableId == event.event.stableId }
+                                if (idx >= 0) {
+                                    toolCalls[idx] = event.event
+                                } else {
+                                    toolCalls.add(event.event)
+                                }
+                                _uiState.update { it.copy(liveToolCalls = toolCalls.toList()) }
+                            }
+
+                            is SSEEvent.Title -> {
+                                if (event.title != null) {
+                                    _uiState.update { it.copy(title = event.title) }
+                                }
+                            }
+
+                            is SSEEvent.Done -> {
+                                val finalMessages = if (event.session?.messages != null) {
+                                    event.session.messages
+                                } else {
+                                    val finalMsg = ChatMessage(
+                                        role = "assistant",
+                                        content = accumulatedText.ifEmpty { null },
+                                        reasoning = accumulatedReasoning.ifEmpty { null },
+                                        timestamp = System.currentTimeMillis() / 1000.0,
+                                        messageId = assistantMessageId
+                                    )
+                                    _uiState.value.messages.filterNot { it.messageId == assistantMessageId } + finalMsg
+                                }
+                                _uiState.update {
+                                    it.copy(
+                                        messages = finalMessages,
+                                        isStreaming = false,
+                                        activeStreamId = null,
+                                        liveReasoningText = "",
+                                        liveToolCalls = emptyList(),
+                                        contextWindow = event.usage ?: it.contextWindow
+                                    )
+                                }
+                                cacheRepo.cacheMessages(sessionId, finalMessages)
+                            }
+
+                            is SSEEvent.StreamEnd -> {
+                                val currentMessages = _uiState.value.messages
+                                _uiState.update {
+                                    it.copy(
+                                        isStreaming = false,
+                                        activeStreamId = null,
+                                        liveReasoningText = "",
+                                        liveToolCalls = emptyList()
+                                    )
+                                }
+                                cacheRepo.cacheMessages(sessionId, currentMessages)
+                            }
+
+                            is SSEEvent.Cancelled -> {
+                                _uiState.update {
+                                    it.copy(
+                                        isStreaming = false,
+                                        activeStreamId = null,
+                                        liveReasoningText = "",
+                                        liveToolCalls = emptyList()
+                                    )
+                                }
+                            }
+
+                            is SSEEvent.Error -> {
+                                _uiState.update {
+                                    it.copy(
+                                        isStreaming = false,
+                                        activeStreamId = null,
+                                        errorMessage = event.message,
+                                        liveReasoningText = "",
+                                        liveToolCalls = emptyList()
+                                    )
+                                }
+                            }
+
+                            is SSEEvent.TransportError -> {
+                                _uiState.update {
+                                    it.copy(
+                                        isStreaming = false,
+                                        activeStreamId = null,
+                                        errorMessage = "Connection lost: ${event.message}",
+                                        liveReasoningText = "",
+                                        liveToolCalls = emptyList()
+                                    )
+                                }
+                            }
+
+                            is SSEEvent.ApprovalPending -> {
+                                _uiState.update { it.copy(approvalPending = event.response) }
+                            }
+
+                            is SSEEvent.ClarificationPending -> {
+                                _uiState.update { it.copy(clarificationPending = event.response) }
+                            }
+
+                            else -> { /* ignore */ }
                         }
-                        _uiState.update { it.copy(liveToolCalls = toolCalls.toList()) }
                     }
-
-                    is SSEEvent.Title -> {
-                        if (event.title != null) {
-                            _uiState.update { it.copy(title = event.title) }
-                        }
-                    }
-
-                    is SSEEvent.Done -> {
-                        val finalMessages = if (event.session?.messages != null) {
-                            event.session.messages
-                        } else {
-                            val finalMsg = ChatMessage(
-                                role = "assistant",
-                                content = accumulatedText.ifEmpty { null },
-                                reasoning = accumulatedReasoning.ifEmpty { null },
-                                timestamp = System.currentTimeMillis() / 1000.0,
-                                messageId = assistantMessageId
-                            )
-                            _uiState.value.messages.filterNot { it.messageId == assistantMessageId } + finalMsg
-                        }
-                        _uiState.update {
-                            it.copy(
-                                messages = finalMessages,
-                                isStreaming = false,
-                                activeStreamId = null,
-                                liveReasoningText = "",
-                                liveToolCalls = emptyList(),
-                                contextWindow = event.usage ?: it.contextWindow
-                            )
-                        }
-                    }
-
-                    is SSEEvent.StreamEnd -> {
-                        _uiState.update {
-                            it.copy(
-                                isStreaming = false,
-                                activeStreamId = null,
-                                liveReasoningText = "",
-                                liveToolCalls = emptyList()
-                            )
-                        }
-                    }
-
-                    is SSEEvent.Cancelled -> {
-                        _uiState.update {
-                            it.copy(
-                                isStreaming = false,
-                                activeStreamId = null,
-                                liveReasoningText = "",
-                                liveToolCalls = emptyList()
-                            )
-                        }
-                    }
-
-                    is SSEEvent.Error -> {
-                        _uiState.update {
-                            it.copy(
-                                isStreaming = false,
-                                activeStreamId = null,
-                                errorMessage = event.message,
-                                liveReasoningText = "",
-                                liveToolCalls = emptyList()
-                            )
-                        }
-                    }
-
-                    is SSEEvent.TransportError -> {
-                        _uiState.update {
-                            it.copy(
-                                isStreaming = false,
-                                activeStreamId = null,
-                                errorMessage = "Connection lost: ${event.message}",
-                                liveReasoningText = "",
-                                liveToolCalls = emptyList()
-                            )
-                        }
-                    }
-
-                    is SSEEvent.ApprovalPending -> {
-                        _uiState.update { it.copy(approvalPending = event.response) }
-                    }
-
-                    is SSEEvent.ClarificationPending -> {
-                        _uiState.update { it.copy(clarificationPending = event.response) }
-                    }
-
-                    else -> { /* ignore */ }
                 }
             }
         }

@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -13,8 +14,8 @@ android {
         applicationId = "com.hermex.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "1.1.3"
+        versionCode = 18
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -106,6 +107,12 @@ dependencies {
     implementation("io.noties.markwon:core:4.6.2")
     implementation("io.noties.markwon:ext-strikethrough:4.6.2")
     implementation("io.noties.markwon:html:4.6.2")
+    implementation("io.noties.markwon:recycler-table:4.6.2")
+
+    // Room
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
 
     // Logging
     implementation("com.jakewharton.timber:timber:5.0.1")

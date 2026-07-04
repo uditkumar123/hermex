@@ -4,6 +4,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
+enum class ConnectionState {
+    Connected,
+    Reconnecting,
+    Disconnected
+}
+
+sealed class SSEStreamEvent {
+    data class Event(val event: SSEEvent) : SSEStreamEvent()
+    data class StateChange(val state: ConnectionState) : SSEStreamEvent()
+}
+
 sealed class SSEEvent {
     data class Token(val text: String) : SSEEvent()
     data class InterimAssistant(val text: String?, val alreadyStreamed: Boolean?) : SSEEvent()

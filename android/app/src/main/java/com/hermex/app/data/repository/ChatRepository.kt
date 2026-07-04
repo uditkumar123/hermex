@@ -50,7 +50,7 @@ class ChatRepository(
         }
     }
 
-    fun streamChat(streamId: String, afterSeq: Int? = null): Flow<SSEEvent> {
+    fun streamChat(streamId: String, afterSeq: Int? = null): Flow<SSEStreamEvent> {
         val baseUrl = serverUrl.trimEnd('/')
         val url = buildString {
             append("$baseUrl/api/chat/stream?stream_id=$streamId")

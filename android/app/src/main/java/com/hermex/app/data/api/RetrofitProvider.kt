@@ -141,7 +141,9 @@ object RetrofitProvider {
                 .header("Accept", "text/html,application/json")
                 .build()
             client.newCall(request).execute().close()
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w("Hermex", "Session warmup failed: ${e.message}")
+        }
     }
 
     fun normalizeUrl(url: String): String {
@@ -152,7 +154,7 @@ object RetrofitProvider {
         if (normalized.startsWith("http://")) {
             val host = try {
                 java.net.URI(normalized).host
-            } catch (_: Exception) { null }
+            } catch (e: Exception) { Log.w("Hermex", "Failed to parse URL host: ${e.message}"); null }
             if (host != null && !isLocalAddress(host)) {
                 Log.w("Hermex", "Connecting via unencrypted HTTP to non-local server: $host")
             }
@@ -249,7 +251,9 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
                 editor.putString("cookies_$host", serialized)
             }
             editor.apply()
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w("Hermex", "Failed to persist cookies: ${e.message}")
+        }
     }
 
     private fun loadFromStorage() {
@@ -269,11 +273,13 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
                                 .domain(parts[3])
                                 .let { if (parts[4].isNotEmpty()) it.path(parts[4]) else it }
                                 .build()
-                        } catch (_: Exception) { null }
+                        } catch (e: Exception) { Log.w("Hermex", "Failed to parse cookie: ${e.message}"); null }
                     } else null
                 }
                 cookieStore[host] = cookies.toMutableList()
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w("Hermex", "Failed to load cookies: ${e.message}")
+        }
     }
 }

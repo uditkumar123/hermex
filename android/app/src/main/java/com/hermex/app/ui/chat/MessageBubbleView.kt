@@ -22,6 +22,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.request.ImageRequest
+import com.hermex.app.data.auth.AuthManager
+import com.hermex.app.data.auth.AuthState
 import com.hermex.app.data.model.ChatMessage
 import com.hermex.app.ui.theme.*
 import com.hermex.app.util.toRelativeTime
@@ -32,6 +37,8 @@ import io.noties.markwon.Markwon
 fun MessageBubbleView(
     message: ChatMessage,
     isStreaming: Boolean = false,
+    sessionId: String? = null,
+    serverUrl: String? = null,
     onRegenerate: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -80,8 +87,9 @@ fun MessageBubbleView(
 
                 if (message.displayContent.isNotEmpty()) {
                     val markwon = remember { Markwon.create(context) }
-                    val spannable = remember(message.displayContent) {
-                        markwon.toMarkdown(message.displayContent)
+                    val displayContent = addCodeBlockLabels(message.displayContent)
+                    val spannable = remember(displayContent) {
+                        markwon.toMarkdown(displayContent)
                     }
                     val textColor = if (isUser) {
                         MaterialTheme.colorScheme.onPrimary.toArgb()
@@ -105,15 +113,40 @@ fun MessageBubbleView(
                 if (message.hasAttachments && message.attachments != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     message.attachments.forEach { attachment ->
-                        Text(
-                            text = "📎 ${attachment.displayName}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isUser) {
-                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                        if (attachment.isImageAttachment && sessionId != null) {
+                            val imageUrl = buildString {
+                                val base = serverUrl?.trimEnd('/')
+                                if (base != null) append("$base/api/file?session_id=$sessionId&path=${attachment.path ?: attachment.name ?: ""}")
                             }
-                        )
+                            if (imageUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(imageUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = attachment.displayName,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 300.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    onState = { state ->
+                                        if (state is AsyncImagePainter.State.Error) {
+                                            // fallback: show filename if image fails to load
+                                        }
+                                    }
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = "📎 ${attachment.displayName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (isUser) {
+                                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -149,6 +182,15 @@ fun MessageBubbleView(
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
             )
         }
+    }
+}
+
+internal fun addCodeBlockLabels(markdown: String): String {
+    val codeBlockRegex = Regex("""```(\w[\w+#.-]*)\s*\n""")
+    return codeBlockRegex.replace(markdown) { match ->
+        val lang = match.groupValues[1]
+        val label = lang.split(".").last()
+        "> `$label`\n>\n```$label\n"
     }
 }
 

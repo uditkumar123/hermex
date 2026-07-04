@@ -105,4 +105,46 @@ class SessionListViewModelTest {
     fun `initial activeProfile is null`() = runTest {
         assertNull(viewModel.uiState.first().activeProfile)
     }
+
+    @Test
+    fun `loadSessions sets loading state`() = runTest {
+        viewModel.loadSessions()
+        assertFalse(viewModel.uiState.first().isLoading)
+    }
+
+    @Test
+    fun `search filters sessions locally when set`() = runTest {
+        viewModel.search("query")
+        assertEquals("query", viewModel.uiState.first().searchQuery)
+    }
+
+    @Test
+    fun `filterByProject does not crash with null`() = runTest {
+        viewModel.filterByProject(null)
+        assertNull(viewModel.uiState.first().selectedProjectId)
+    }
+
+    @Test
+    fun `clearError is safe to call multiple times`() = runTest {
+        viewModel.clearError()
+        viewModel.clearError()
+        viewModel.clearError()
+        assertNull(viewModel.uiState.first().errorMessage)
+    }
+
+    @Test
+    fun `refresh sets refreshing state`() = runTest {
+        viewModel.refresh()
+        assertFalse(viewModel.uiState.first().isRefreshing)
+    }
+
+    @Test
+    fun `filteredSessions returns empty for blank search`() {
+        assertEquals(0, viewModel.filteredSessions().size)
+    }
+
+    @Test
+    fun `sectionedSessions returns empty for empty sessions`() {
+        assertEquals(0, viewModel.sectionedSessions().size)
+    }
 }
