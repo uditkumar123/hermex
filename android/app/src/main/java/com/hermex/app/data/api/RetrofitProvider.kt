@@ -50,28 +50,6 @@ object RetrofitProvider {
 
         val jar = ensureCookieJar(context)
 
-        val headerInterceptor = Interceptor { chain ->
-            val original = chain.request()
-            val builder = original.newBuilder()
-
-            CustomHeaderStore.snapshot().forEach { header ->
-                builder.addHeader(header.name, header.value)
-            }
-
-            builder.header("Accept", "application/json")
-            builder.header("Cache-Control", "no-cache")
-
-            chain.proceed(builder.build())
-        }
-
-        val authInterceptor = Interceptor { chain ->
-            val response = chain.proceed(chain.request())
-            if (response.code == 401) {
-                onUnauthorized?.invoke()
-            }
-            response
-        }
-
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = if (context != null && (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
                 HttpLoggingInterceptor.Level.BASIC
@@ -82,8 +60,8 @@ object RetrofitProvider {
 
         val okHttpClient = OkHttpClient.Builder()
             .cookieJar(jar)
-            .addInterceptor(headerInterceptor)
-            .addInterceptor(authInterceptor)
+            .addInterceptor(headerInterceptor())
+            .addInterceptor(authInterceptor())
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -106,23 +84,48 @@ object RetrofitProvider {
         return getOrCreate(baseUrl, context).create(HermesApi::class.java)
     }
 
-    fun createOkHttpClient(context: android.content.Context? = null): OkHttpClient {
+    fun createOkHttpClient(
+        context: android.content.Context? = null,
+        readTimeoutSeconds: Long = 0,
+        notifyUnauthorized: Boolean = true
+    ): OkHttpClient {
         val jar = ensureCookieJar(context)
-        val headerInterceptor = Interceptor { chain ->
-            val original = chain.request()
-            val builder = original.newBuilder()
-            CustomHeaderStore.snapshot().forEach { header ->
-                builder.addHeader(header.name, header.value)
-            }
-            chain.proceed(builder.build())
-        }
-
         return OkHttpClient.Builder()
             .cookieJar(jar)
-            .addInterceptor(headerInterceptor)
+            .addInterceptor(headerInterceptor())
+            .apply {
+                if (notifyUnauthorized) addInterceptor(authInterceptor())
+            }
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.SECONDS)
+            .readTimeout(readTimeoutSeconds, TimeUnit.SECONDS)
             .build()
+    }
+
+    private fun headerInterceptor(): Interceptor = Interceptor { chain ->
+        val original = chain.request()
+        val builder = original.newBuilder()
+
+        CustomHeaderStore.snapshot().forEach { header ->
+            builder.addHeader(header.name, header.value)
+        }
+
+        if (original.header("Accept") == null) {
+            builder.header("Accept", "application/json")
+        }
+        if (original.header("Cache-Control") == null) {
+            builder.header("Cache-Control", "no-cache")
+        }
+
+        chain.proceed(builder.build())
+    }
+
+    private fun authInterceptor(): Interceptor = Interceptor { chain ->
+        val response = chain.proceed(chain.request())
+        val path = response.request.url.encodedPath
+        if (response.code == 401 && path != "/api/auth/login" && path != "/api/auth/status") {
+            onUnauthorized?.invoke()
+        }
+        response
     }
 
     fun invalidate() {

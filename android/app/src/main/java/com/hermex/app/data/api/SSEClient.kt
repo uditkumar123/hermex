@@ -1,5 +1,6 @@
 package com.hermex.app.data.api
 
+import com.hermex.app.data.auth.SessionExpiredMessage
 import com.hermex.app.data.model.ConnectionState
 import com.hermex.app.data.model.SSEEvent
 import com.hermex.app.data.model.SSEStreamEvent
@@ -66,6 +67,12 @@ class SSEClient(
                         response: Response?
                     ) {
                         Timber.e(t, "SSE connection failure")
+                        if (response?.code == 401) {
+                            shouldReconnect = false
+                            trySend(SSEStreamEvent.Event(SSEEvent.TransportError(SessionExpiredMessage)))
+                            cont.resume(false)
+                            return
+                        }
                         retryCount++
                         if (retryCount >= backoffDelays.size) {
                             shouldReconnect = false

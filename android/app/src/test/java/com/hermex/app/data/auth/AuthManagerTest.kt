@@ -2,6 +2,7 @@ package com.hermex.app.data.auth
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.hermex.app.data.api.RetrofitProvider
 import com.hermex.app.data.model.APIError
 import io.mockk.every
 import io.mockk.mockk
@@ -30,6 +31,8 @@ class AuthManagerTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         authManager = AuthManager.getInstance(context)
+        authManager.clearError()
+        RetrofitProvider.invalidate()
     }
 
     @Test
@@ -173,6 +176,48 @@ class AuthManagerTest {
             assertTrue(result.isSuccess)
             assertEquals("GET", request.method)
             assertEquals("/health", request.path)
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `checkAuthStatus treats 401 as password required`() = runTest {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(401))
+        server.start()
+
+        try {
+            val result = authManager.checkAuthStatus(server.url("/").toString())
+            val request = server.takeRequest()
+
+            assertTrue(result.isSuccess)
+            assertEquals("GET", request.method)
+            assertEquals("/api/auth/status", request.path)
+            assertTrue(result.getOrThrow().isAuthRequired)
+            assertTrue(result.getOrThrow().isPasswordOnly)
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `login surfaces invalid password response`() = runTest {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(401)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"error\":\"Invalid password\"}")
+        )
+        server.start()
+
+        try {
+            val result = authManager.login(server.url("/").toString(), "wrong")
+
+            assertTrue(result.isFailure)
+            assertEquals("Invalid password", authManager.error.first())
         } finally {
             server.shutdown()
         }

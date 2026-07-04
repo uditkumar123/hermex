@@ -41,6 +41,7 @@ fun ConnectScreen(
 ) {
     val context = LocalContext.current
     val authManager = remember { getInstance(context) }
+    val authError by authManager.error.collectAsState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
@@ -51,6 +52,12 @@ fun ConnectScreen(
     var errorMessage by remember { mutableStateOf<String?>(initialMessage) }
     var authRequired by remember { mutableStateOf(!initialServerUrl.isNullOrBlank()) }
     var serverVersion by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(authError) {
+        if (!authError.isNullOrBlank()) {
+            errorMessage = authError
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -190,7 +197,10 @@ fun ConnectScreen(
                                     scope.launch {
                                         connectWithPassword(authManager, serverUrl, password) { success ->
                                             if (success) onConnected()
-                                            else step = ConnectStep.ENTER_PASSWORD
+                                            else {
+                                                errorMessage = authManager.error.value ?: "Unable to sign in."
+                                                step = ConnectStep.ENTER_PASSWORD
+                                            }
                                         }
                                     }
                                 }
@@ -253,7 +263,10 @@ fun ConnectScreen(
                             scope.launch {
                                 connectWithPassword(authManager, serverUrl, password) { success ->
                                     if (success) onConnected()
-                                    else step = ConnectStep.ENTER_PASSWORD
+                                    else {
+                                        errorMessage = authManager.error.value ?: "Unable to sign in."
+                                        step = ConnectStep.ENTER_PASSWORD
+                                    }
                                 }
                             }
                         }

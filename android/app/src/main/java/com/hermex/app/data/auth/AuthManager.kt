@@ -13,6 +13,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Request
 import retrofit2.HttpException
 import timber.log.Timber
@@ -50,6 +54,11 @@ class AuthManager private constructor(private val context: Context) {
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val errorJson = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
 
     val currentServerUrl: String?
         get() = when (val s = _state.value) {
@@ -106,10 +115,11 @@ class AuthManager private constructor(private val context: Context) {
             try {
                 val normalizedUrl = RetrofitProvider.normalizeUrl(serverUrl)
                 val statusUrl = "${normalizedUrl}api/auth/status"
-                val client = okhttp3.OkHttpClient.Builder()
-                    .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                    .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                    .build()
+                val client = RetrofitProvider.createOkHttpClient(
+                    context = context,
+                    readTimeoutSeconds = 10,
+                    notifyUnauthorized = false
+                )
                 val request = Request.Builder()
                     .url(statusUrl)
                     .get()
@@ -118,7 +128,7 @@ class AuthManager private constructor(private val context: Context) {
                     if (response.isSuccessful) {
                         val body = response.body?.string()
                         if (body != null) {
-                            val json = kotlinx.serialization.json.Json {
+                            val json = Json {
                                 ignoreUnknownKeys = true
                                 isLenient = true
                                 coerceInputValues = true
@@ -128,8 +138,10 @@ class AuthManager private constructor(private val context: Context) {
                         } else {
                             Result.failure(APIError.Decoding(Exception("Empty response body")))
                         }
+                    } else if (response.code == 401) {
+                        Result.success(passwordRequiredStatus())
                     } else {
-                        Result.failure(APIError.Http(response.code))
+                        Result.failure(APIError.Http(response.code, response.body?.string()))
                     }
                 }
             } catch (e: Exception) {
@@ -137,6 +149,15 @@ class AuthManager private constructor(private val context: Context) {
                 Result.failure(wrapError(e))
             }
         }
+    }
+
+    private fun passwordRequiredStatus(): AuthStatusResponse {
+        return AuthStatusResponse(
+            authenticated = false,
+            authEnabled = true,
+            passwordRequired = true,
+            passwordAuthEnabled = true
+        )
     }
 
     suspend fun login(serverUrl: String, password: String): Result<LoginResponse> {
@@ -157,10 +178,30 @@ class AuthManager private constructor(private val context: Context) {
                 Result.failure(Exception(response.displayMessage))
             }
         } catch (e: Exception) {
-            _error.value = e.message
-            Result.failure(wrapError(e))
+            val wrapped = wrapError(e)
+            _error.value = loginFailureMessage(e, wrapped)
+            Result.failure(wrapped)
         } finally {
             _isLoading.value = false
+        }
+    }
+
+    private fun loginFailureMessage(e: Exception, wrapped: Exception): String {
+        return when (wrapped) {
+            is APIError.Unauthorized -> errorBodyMessage(e) ?: "Invalid password"
+            else -> wrapped.message ?: "Unable to sign in."
+        }
+    }
+
+    private fun errorBodyMessage(e: Exception): String? {
+        val body = (e as? HttpException)?.response()?.errorBody()?.string()?.takeIf { it.isNotBlank() }
+            ?: return null
+        return try {
+            val json = errorJson.parseToJsonElement(body).jsonObject
+            json["error"]?.jsonPrimitive?.contentOrNull
+                ?: json["message"]?.jsonPrimitive?.contentOrNull
+        } catch (_: Exception) {
+            null
         }
     }
 
