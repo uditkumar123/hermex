@@ -102,12 +102,40 @@ class AuthManager private constructor(private val context: Context) {
     }
 
     suspend fun checkAuthStatus(serverUrl: String): Result<AuthStatusResponse> {
-        return try {
-            val api = RetrofitProvider.createApi(serverUrl, context)
-            val response = api.authStatus()
-            Result.success(response)
-        } catch (e: Exception) {
-            Result.failure(wrapError(e))
+        return withContext(Dispatchers.IO) {
+            try {
+                val normalizedUrl = RetrofitProvider.normalizeUrl(serverUrl)
+                val statusUrl = "${normalizedUrl}api/auth/status"
+                val client = okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                val request = Request.Builder()
+                    .url(statusUrl)
+                    .get()
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string()
+                        if (body != null) {
+                            val json = kotlinx.serialization.json.Json {
+                                ignoreUnknownKeys = true
+                                isLenient = true
+                                coerceInputValues = true
+                            }
+                            val status = json.decodeFromString<AuthStatusResponse>(body)
+                            Result.success(status)
+                        } else {
+                            Result.failure(APIError.Decoding(Exception("Empty response body")))
+                        }
+                    } else {
+                        Result.failure(APIError.Http(response.code))
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Auth status check failed")
+                Result.failure(wrapError(e))
+            }
         }
     }
 

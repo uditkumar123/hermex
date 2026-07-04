@@ -9,7 +9,6 @@ Your phone becomes the control plane for your AI agent — the agent, its tools,
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 [![Android APK](https://img.shields.io/badge/APK-free-brightgreen?logo=android)](https://github.com/uditkumar123/hermex/releases)
 [![Google Play](https://img.shields.io/badge/Google_Play-$1.99-3DDC84?logo=googleplay)](https://play.google.com/store/apps/details?id=com.hermex.app)
-[![iOS](https://img.shields.io/badge/iOS-18%2B-000000?logo=apple&logoColor=white)](https://apps.apple.com/app/hermex/id6767006319)
 
 [Report a bug](https://github.com/uditkumar123/hermex/issues) · [Contributing](CONTRIBUTING.md)
 
@@ -32,7 +31,6 @@ Your phone becomes the control plane for your AI agent — the agent, its tools,
 
 | Platform | Channel | Price | Min Version |
 |----------|---------|-------|-------------|
-| iOS | App Store | Free | iOS 18+ |
 | Android | Google Play | $1.99 | Android 8.0+ (API 26) |
 | Android | GitHub (APK) | Free | Android 8.0+ (API 26) |
 
@@ -52,7 +50,6 @@ Install and start `hermes-webui` on macOS, Linux, or Windows/WSL2 (Python 3.11+)
 
 **Android (free):** [Download the APK](https://github.com/uditkumar123/hermex/releases) from GitHub Releases.
 **Android (paid):** [Get it on Google Play](https://play.google.com/store/apps/details?id=com.hermex.app) for $1.99 — supports development.
-**iOS:** [Download from the App Store](https://apps.apple.com/app/hermex/id6767006319).
 
 Enter your server URL and password, and you're in.
 
@@ -76,16 +73,6 @@ To bump version and build:
 .\scripts\build-apk.ps1              # patch bump (default)
 .\scripts\build-apk.ps1 -BumpType minor  # minor bump
 .\scripts\build-apk.ps1 -BumpType major  # major bump
-```
-
-### iOS
-
-Requirements:
-- Xcode 26+ (iOS 18 SDK)
-- iPhone or simulator on iOS 18+
-
-```bash
-xcodebuild -project HermesMobile.xcodeproj -scheme HermesMobile -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
 ## Automation

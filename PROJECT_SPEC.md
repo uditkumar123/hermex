@@ -1,15 +1,15 @@
-# Hermex — iOS App Project Specification
+# Hermex — Android App Project Specification
 
 **Status:** v0.4 spec — revised pre-polish plan with a glass-forward native mobile UI direction
 **Author:** Project owner + planning assistant
-**Target:** Native iOS client for the [`nesquena/hermes-webui`](https://github.com/nesquena/hermes-webui) Python server
+**Target:** Native Android client for the [`nesquena/hermes-webui`](https://github.com/nesquena/hermes-webui) Python server
 **Audience:** A coding agent tasked with building the app, plus the human owner reviewing it
 
 ---
 
 ## 0. How to use this document
 
-You (the coding agent) are building a native iOS app called **Hermex** in App Store Connect. The Xcode target remains `HermesMobile`; the iPhone home-screen display name is `Hermex`. You are NOT modifying the upstream `nesquena/hermes-webui` Python server in this project. You are building a separate Swift/SwiftUI iOS application that talks to that server over HTTPS.
+You (the coding agent) are building a native Android app called **Hermex** (namespace `com.hermex.app`). You are NOT modifying the upstream `nesquena/hermes-webui` Python server in this project. You are building a separate Kotlin/Jetpack Compose Android application that talks to that server over HTTPS.
 
 Treat each section's checkboxes as your work plan. After every milestone, update the `## Progress log` at the bottom.
 
@@ -20,17 +20,17 @@ If anything in this spec is ambiguous, **stop and ask the human owner before gue
 ## 1. Project summary
 
 ### 1.1 What we're building
-A native iOS app (SwiftUI, iOS 18+, iPhone only) that lets the user drive a self-hosted Hermes AI agent from their phone. The user runs the `hermes-webui` Python server on a machine they control and connects from the phone via Cloudflare Tunnel (or Tailscale).
+A native Android app (Kotlin/Jetpack Compose, API 26+) that lets the user drive a self-hosted Hermes AI agent from their phone. The user runs the `hermes-webui` Python server on a machine they control and connects from the phone via Cloudflare Tunnel (or Tailscale).
 
 ### 1.2 What it is NOT
 - ❌ Not a webview wrapper around the existing browser UI.
-- ❌ Not a port of the Python server to iOS (impossible due to App Store sandboxing).
+- ❌ Not a port of the Python server (the server stays on the user's own machine).
 - ❌ Not a hosted service — every user brings their own server.
 
 ### 1.3 Why it exists
 The `hermes-webui` browser UI works on mobile via Cloudflare Tunnel/Tailscale, but a native client gives:
-- A real iOS app icon, lifecycle, and Keychain-backed auth.
-- Native streaming chat with proper SwiftUI rendering (no PWA quirks).
+- A real Android app icon, lifecycle, and encrypted auth.
+- Native streaming chat with proper Jetpack Compose rendering (no PWA quirks).
 - Offline read-only cache of recent sessions.
 - Foundation for native completion notifications and future out-of-app status surfaces.
 

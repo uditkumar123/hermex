@@ -1,8 +1,8 @@
 # AGENTS.md — working agreement for Hermex
 
-Hermex is a native SwiftUI iPhone app (Xcode target/scheme `HermesMobile`, App Store
-name `Hermex`) for a self-hosted `hermes-webui` server. `PROJECT_SPEC.md` is the
-product/API source of truth — if a request conflicts with it, stop and ask.
+Hermex is a native Android app (Gradle/Kotlin, Google Play + GitHub APK) for a
+self-hosted `hermes-webui` server. `PROJECT_SPEC.md` is the product/API source of
+truth — if a request conflicts with it, stop and ask.
 Read by every agent (Codex, Claude Code, …); keep it tool-agnostic.
 
 ## Session start & wrap-up
@@ -19,8 +19,8 @@ Read by every agent (Codex, Claude Code, …); keep it tool-agnostic.
 ## How work flows
 - One issue → one short `issue/<n>-slug` branch → one PR (branches with no issue use
   `chore/` or `fix/`). Issue/triage/domain conventions live in `docs/agents/`.
-- `master` is the protected release-candidate branch (the source for internal
-  TestFlight builds): keep it buildable, never do feature work on it.
+- `master` is the protected release-candidate branch: keep it buildable, never do
+  feature work on it.
 - Pushing a branch, opening/updating a PR, or merging needs explicit human approval.
   Triage bot/review comments before accepting them.
 
@@ -34,43 +34,30 @@ Read by every agent (Codex, Claude Code, …); keep it tool-agnostic.
    if missing: `git clone https://github.com/nesquena/hermes-webui .codex-tmp/hermes-webui`).
    That upstream copy is read-only — never modify it (refreshing via `git pull` is fine).
 2. **No new third-party dependencies** beyond the spec's locked list without approval.
-3. **Tolerant decoding:** every `Codable` model uses optionals for fields upstream
+3. **Tolerant decoding:** every `@Serializable` model uses optionals for fields upstream
    might add/rename. Never crash on unknown fields.
 4. **No destructive commands** (`rm -rf`, `git push --force`, anything touching
    `~/Library/LaunchAgents/` or restarting Mac services). Suggest them; let the human run them.
 5. **Don't commit broken builds.** If a build or test fails, fix it before writing more code.
 
 ## Tooling
-- The maintainer works in **VS Code**, not the Xcode UI — prefer terminal validation;
-  ask to open Xcode only when the terminal can't answer.
-- Use **XcodeBuildMCP** for simulator build/test/run/log; fall back to raw
-  `xcodebuild`/`xcrun simctl` for release/archive or low-level diagnosis. Defaults live
-  in `.xcodebuildmcp/config.yaml` (scheme `HermesMobile`, sim **iPhone 17**); if that
-  sim is missing, pick a nearby iPhone and say which.
-- **Simulator installs must be signed.** Never install a `CODE_SIGNING_ALLOWED=NO`
-  build on the simulator for manual testing — that flag is for compile-only checks
-  (see `TESTFLIGHT.md`) and strips entitlements, so Keychain writes fail with
-  `errSecMissingEntitlement` and login breaks. Put the app on the sim via XcodeBuildMCP
-  `build_run_sim` or a plain signed Debug build (no signing-disabling flags), then install/launch.
-- Before asking for review or committing a slice: run the full XCTest suite, and
-  build + launch the app for the human's manual simulator test when UI changed.
+- The maintainer works in **VS Code**, not Android Studio — prefer terminal validation;
+  ask to open Android Studio only when the terminal can't answer.
+- Build and test via Gradle: `cd android && ./gradlew assembleDebug test`.
+- Before asking for review or committing a slice: run the full test suite, and
+  build the app for the human's manual test when UI changed.
 
-## App identity (resolved via xcconfig — not grep-able)
-Bundle ID `com.uzairansar.hermesmobile` · tests `….tests` · Team `6GYD9C9N6R` · SKU `hermes-mobile-ios`.
+## App identity
+Namespace `com.hermex.app` · Play Store listing `Hermex` · version in `android/app/build.gradle.kts`.
 
-## "push to branch testflight" (maintainer-only)
-Upload the current branch to the side-by-side **Hermex Branch** internal TestFlight app
-(`com.uzairansar.hermesmobile.branch`) — a TestFlight upload, **not** a git push.
-Requires the maintainer's App Store Connect access; contributors never need this. Use a
-unique `CURRENT_PROJECT_VERSION` (e.g. `YYYYMMDDHHMM`) each time. Full commands + branch
-identity: `DEVELOPMENT.md`. Never touch the production `com.uzairansar.hermesmobile` app
-unless explicitly asked.
+## "push to branch testflight" — REMOVED (Android-only fork)
+This was a maintainer-only iOS operation. Not applicable.
 
 ## Working with the human
 - Surface tradeoffs in plain English before non-obvious choices; when in doubt, ask.
 - Ask before touching anything under the spec's "Open questions."
 - After each slice, report: (1) files changed (2) build/test command run (3) result
-  (4) next suggested step — plus a short manual simulator test plan when UI changed.
+  (4) next suggested step — plus a short manual test plan when UI changed.
 
 ## Keep this file honest
 If something here surprises you or contradicts the project, tell the developer and

@@ -13,7 +13,7 @@ Hermex does not collect, store, or transmit any personal data. The app connects 
 
 ## What the app stores locally
 
-- Your server URL and password, encrypted in Android Keystore / iOS Keychain.
+- Your server URL and password, encrypted in Android Keystore.
 - Cached session data so conversations are readable offline.
 
 This data never leaves your device.

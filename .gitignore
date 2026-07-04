@@ -54,26 +54,5 @@ update-ecc.ps1
 .planning/
 .xcodebuildmcp/
 docs/agents/
-
-# ==========================================
-# iOS (upstream reference — remove when diverging)
-# ==========================================
-DerivedData/
-build/
-*.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
-*.xcuserstate
-*.xcscmblueprint
-.build/
-Package.resolved
-.swiftpm/
-Config/Local.xcconfig
-*.ipa
-*.dSYM.zip
-*.dSYM
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/screenshots/**/*.png
-fastlane/test_output/
 PROGRESS.md
 CURRENT.md
