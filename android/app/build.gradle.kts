@@ -27,12 +27,6 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
-        create("release") {
-            storeFile = file("../play-keystore.jks")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "notset"
-            keyAlias = System.getenv("KEY_ALIAS") ?: "notset"
-            keyPassword = System.getenv("KEY_PASSWORD") ?: "notset"
-        }
         create("githubRelease") {
             storeFile = file("../debug.keystore")
             storePassword = "android"
@@ -45,17 +39,13 @@ android {
         debug {
             signingConfig = signingConfigs.getByName("debug")
         }
-        release {
+        create("githubRelease") {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
-        }
-        create("githubRelease") {
-            initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("githubRelease")
         }
     }
