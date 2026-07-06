@@ -11,6 +11,8 @@
 
 You (the coding agent) are building a native Android app called **Hermex** (namespace `com.hermex.app`). You are NOT modifying the upstream `nesquena/hermes-webui` Python server in this project. You are building a separate Kotlin/Jetpack Compose Android application that talks to that server over HTTPS.
 
+**Current repo note:** this repository is now the Android/Kotlin implementation. Older iOS/Swift/TestFlight details below are historical planning context only and must not override the Android app identity, dependency set, build workflows, or `PROJECT_INTENT.md` boundaries.
+
 Treat each section's checkboxes as your work plan. After every milestone, update the `## Progress log` at the bottom.
 
 If anything in this spec is ambiguous, **stop and ask the human owner before guessing.** Do not invent endpoints — verify them against the running server (see §6).

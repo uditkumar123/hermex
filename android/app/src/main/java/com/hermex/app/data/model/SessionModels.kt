@@ -161,6 +161,9 @@ data class SessionResponse(
 @Serializable
 data class SessionMutationResponse(
     val ok: Boolean? = null,
+    @SerialName("session_id") val sessionId: String? = null,
+    val title: String? = null,
+    @SerialName("parent_session_id") val parentSessionId: String? = null,
     val session: SessionSummary? = null,
     val error: String? = null
 )

@@ -33,9 +33,9 @@ class SplashActivity : ComponentActivity() {
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_launcher),
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
                         contentDescription = "Hermex",
-                        modifier = Modifier.size(108.dp)
+                        modifier = Modifier.size(96.dp)
                     )
                 }
 

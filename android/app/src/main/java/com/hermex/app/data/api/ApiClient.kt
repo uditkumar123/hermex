@@ -92,6 +92,9 @@ interface HermesApi {
     @Headers("Content-Type: application/json")
     suspend fun moveSession(@Body body: MoveSessionRequest): SessionMutationResponse
 
+    @GET("/api/projects")
+    suspend fun projects(@Query("all_profiles") allProfiles: Int? = null): ProjectsResponse
+
     // ── Chat ───────────────────────────────────────────────────────
 
     @POST("/api/chat/start")
@@ -149,8 +152,8 @@ interface HermesApi {
     ): FileContentResponse
 
     @Streaming
-    @GET("/api/file")
-    suspend fun getFileStream(
+    @GET("/api/file/raw")
+    suspend fun getRawFileStream(
         @Query("session_id") sessionId: String,
         @Query("path") path: String
     ): okhttp3.ResponseBody

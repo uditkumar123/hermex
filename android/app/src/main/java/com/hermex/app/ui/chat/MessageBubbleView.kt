@@ -3,6 +3,7 @@ package com.hermex.app.ui.chat
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.Uri
 import android.widget.TextView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -114,10 +115,11 @@ fun MessageBubbleView(
                     Spacer(modifier = Modifier.height(8.dp))
                     message.attachments.forEach { attachment ->
                         if (attachment.isImageAttachment && sessionId != null) {
-                            val imageUrl = buildString {
-                                val base = serverUrl?.trimEnd('/')
-                                if (base != null) append("$base/api/file?session_id=$sessionId&path=${attachment.path ?: attachment.name ?: ""}")
-                            }
+                            val imageUrl = buildRawFileUrl(
+                                baseUrl = serverUrl,
+                                sessionId = sessionId,
+                                path = attachment.path ?: attachment.name
+                            )
                             if (imageUrl.isNotEmpty()) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
@@ -192,6 +194,12 @@ internal fun addCodeBlockLabels(markdown: String): String {
         val label = lang.split(".").last()
         "> `$label`\n>\n```$label\n"
     }
+}
+
+private fun buildRawFileUrl(baseUrl: String?, sessionId: String, path: String?): String {
+    val base = baseUrl?.trimEnd('/') ?: return ""
+    val filePath = path ?: return ""
+    return "$base/api/file/raw?session_id=${Uri.encode(sessionId)}&path=${Uri.encode(filePath)}"
 }
 
 private fun copyToClipboard(context: Context, text: String) {

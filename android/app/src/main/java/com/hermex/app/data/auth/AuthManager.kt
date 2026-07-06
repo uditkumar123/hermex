@@ -26,6 +26,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
 const val SessionExpiredMessage = "Session expired. Sign in again."
+private const val LoginSessionNotAcceptedMessage = "Password accepted, but the server did not accept the session cookie. Use the same HTTPS server URL you use in the browser, then try again."
 
 sealed class AuthState {
     data object Unconfigured : AuthState()
@@ -168,8 +169,15 @@ class AuthManager private constructor(private val context: Context) {
             val api = RetrofitProvider.createApi(serverUrl, context)
             val response = api.login(LoginRequest(password))
             if (response.isSuccess) {
-                ServerRegistry.addServer(serverUrl, null, context)
                 CustomHeaderStore.configure(serverUrl, context)
+                val verified = verifyLoginSession(serverUrl)
+                if (!verified) {
+                    clearCookiesForServer(serverUrl)
+                    _state.value = AuthState.LoggedOut(serverUrl)
+                    _error.value = LoginSessionNotAcceptedMessage
+                    return Result.failure(Exception(LoginSessionNotAcceptedMessage))
+                }
+                ServerRegistry.addServer(serverUrl, null, context)
                 _state.value = AuthState.LoggedIn(serverUrl)
                 _error.value = null
                 Result.success(response)
@@ -184,6 +192,12 @@ class AuthManager private constructor(private val context: Context) {
         } finally {
             _isLoading.value = false
         }
+    }
+
+    private suspend fun verifyLoginSession(serverUrl: String): Boolean {
+        return checkAuthStatus(serverUrl)
+            .getOrNull()
+            ?.isAuthRequired == false
     }
 
     private fun loginFailureMessage(e: Exception, wrapped: Exception): String {

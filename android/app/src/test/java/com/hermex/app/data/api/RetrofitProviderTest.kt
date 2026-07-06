@@ -6,6 +6,7 @@ import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,6 +14,19 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class RetrofitProviderTest {
+
+    @Test
+    fun `normalizeUrl blocks public cleartext HTTP`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            RetrofitProvider.normalizeUrl("http://example.com")
+        }
+    }
+
+    @Test
+    fun `normalizeUrl allows local cleartext HTTP`() {
+        assertEquals("http://192.168.1.10:8787/", RetrofitProvider.normalizeUrl("http://192.168.1.10:8787"))
+        assertEquals("http://100.64.0.1:8787/", RetrofitProvider.normalizeUrl("http://100.64.0.1:8787"))
+    }
 
     @Test
     fun `createOkHttpClient invokes unauthorized callback on 401`() {

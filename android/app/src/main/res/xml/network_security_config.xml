@@ -4,9 +4,9 @@
          but cleartext HTTP is permitted for local-network and Tailscale (100.64.0.0/10)
          deployments where TLS is impractical.
 
-         SECURITY: The app validates non-local HTTP connections at runtime and logs
-         a warning. Users should prefer HTTPS via Cloudflare Tunnel, Tailscale Funnel,
-         or a reverse proxy for any server reachable from the public internet.
+         SECURITY: The app blocks non-local HTTP at runtime. Users should prefer
+         HTTPS via Cloudflare Tunnel, Tailscale Funnel, or a reverse proxy for any
+         server reachable from the public internet.
 
          Production hardening backlog:
          - User-pinned certificate fingerprint (TrustKit / OkHttp CertificatePinner)

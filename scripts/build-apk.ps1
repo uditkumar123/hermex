@@ -1,5 +1,5 @@
-# Build APK Script
-# This script bumps the version and builds a debug APK
+# Local Debug APK Script
+# This script bumps the version and builds a local debug APK. Public GitHub Releases are built by .github/workflows/version-bump.yml as signed release APKs.
 # Usage: .\scripts\build-apk.ps1 [major|minor|patch]
 
 param(

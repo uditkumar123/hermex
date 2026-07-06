@@ -2,6 +2,9 @@ package com.hermex.app.data.auth
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
+import com.hermex.app.data.api.RetrofitProvider
 import com.hermex.app.data.model.CustomHeader
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -45,9 +48,13 @@ object CustomHeaderStore {
 
     private fun loadHeaders(serverUrl: String, context: Context): List<CustomHeader> {
         return try {
-            val prefs = getPrefs(context)
+            val prefs = getPrefs(context) ?: return emptyList()
             val key = "custom_headers_${serverUrl.hashCode()}"
-            val jsonStr = prefs.getString(key, null) ?: return emptyList()
+            val jsonStr = prefs.getString(key, null)
+                ?: legacyPrefs(context).getString(key, null)?.also { legacy ->
+                    prefs.edit().putString(key, legacy).apply()
+                }
+                ?: return emptyList()
             json.decodeFromString<List<CustomHeader>>(jsonStr)
         } catch (e: Exception) {
             Timber.e(e, "Failed to load custom headers")
@@ -58,7 +65,7 @@ object CustomHeaderStore {
     private fun saveHeaders(context: Context) {
         val url = serverUrl ?: return
         try {
-            val prefs = getPrefs(context)
+            val prefs = getPrefs(context) ?: return
             val key = "custom_headers_${url.hashCode()}"
             prefs.edit().putString(key, json.encodeToString(headers)).apply()
         } catch (e: Exception) {
@@ -66,7 +73,28 @@ object CustomHeaderStore {
         }
     }
 
-    private fun getPrefs(context: Context): SharedPreferences {
+    private fun getPrefs(context: Context): SharedPreferences? {
+        return try {
+            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+            EncryptedSharedPreferences.create(
+                "hermex_headers_encrypted",
+                masterKeyAlias,
+                context,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Throwable) {
+            if (RetrofitProvider.canUsePlainStorageFallback(context)) {
+                Timber.w(e, "EncryptedSharedPreferences unavailable, using debug-only plain custom header storage")
+                context.getSharedPreferences("hermex_headers", Context.MODE_PRIVATE)
+            } else {
+                Timber.e(e, "EncryptedSharedPreferences unavailable; custom headers will not persist")
+                null
+            }
+        }
+    }
+
+    private fun legacyPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences("hermex_headers", Context.MODE_PRIVATE)
     }
 }

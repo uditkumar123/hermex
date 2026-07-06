@@ -24,13 +24,15 @@ cd android && ./gradlew test
 
 The same suite runs in CI on every pull request.
 
-## Building the APK
+## Building a local debug APK
 
 ```bash
 cd android && ./gradlew assembleDebug
 ```
 
-APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
+Debug APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+Public GitHub Releases are signed release APKs produced by the release workflow, not local debug APKs.
 
 Signed release builds require a keystore. See `android/app/build.gradle.kts` for
 the signing configuration.

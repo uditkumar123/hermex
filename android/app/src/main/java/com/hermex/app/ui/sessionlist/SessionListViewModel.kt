@@ -286,15 +286,10 @@ class SessionListViewModel(application: Application) : AndroidViewModel(applicat
         val repo = repository ?: return
         val sessionId = session.sessionId ?: return
         viewModelScope.launch {
-            repo.createSession(
-                workspace = session.workspace,
-                model = session.model,
-                modelProvider = session.modelProvider,
-                profile = session.profile
-            ).fold(
-                onSuccess = { newSession ->
+            repo.branchSession(sessionId).fold(
+                onSuccess = { response ->
                     refresh()
-                    val newSessionId = newSession.sessionId
+                    val newSessionId = response.sessionId ?: response.session?.sessionId
                     if (newSessionId != null) {
                         // TODO: Navigate to new session
                     }
@@ -348,16 +343,9 @@ class SessionListViewModel(application: Application) : AndroidViewModel(applicat
     fun loadProjects() {
         val repo = repository ?: return
         viewModelScope.launch {
-            // Use fetchWorkspaces as a proxy for projects
-            repo.fetchWorkspaces().fold(
+            repo.fetchProjects().fold(
                 onSuccess = { response ->
-                    val projects = response.workspaces?.map { workspace ->
-                        ProjectSummary(
-                            projectId = workspace.path,
-                            name = workspace.name
-                        )
-                    } ?: emptyList()
-                    _uiState.update { it.copy(projects = projects) }
+                    _uiState.update { it.copy(projects = response.projects ?: emptyList()) }
                 },
                 onFailure = { e ->
                     _uiState.update { it.copy(errorMessage = e.message) }

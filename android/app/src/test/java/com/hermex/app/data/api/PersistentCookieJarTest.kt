@@ -190,6 +190,35 @@ class PersistentCookieJarTest {
     }
 
     @Test
+    fun `secure and httpOnly attributes persist across instances`() {
+        val jar1 = PersistentCookieJar(context)
+        jar1.clearAll()
+
+        val url = "https://example.com".toHttpUrl()
+        val cookie = Cookie.Builder()
+            .name("session")
+            .value("persistent123")
+            .hostOnlyDomain("example.com")
+            .path("/")
+            .secure()
+            .httpOnly()
+            .expiresAt(System.currentTimeMillis() + 3600_000)
+            .build()
+
+        jar1.saveFromResponse(url, listOf(cookie))
+
+        val jar2 = PersistentCookieJar(context)
+        val loaded = jar2.loadForRequest(url)
+        assertEquals(1, loaded.size)
+        assertTrue(loaded[0].secure)
+        assertTrue(loaded[0].httpOnly)
+        assertTrue(loaded[0].hostOnly)
+        assertTrue(jar2.loadForRequest("http://example.com".toHttpUrl()).isEmpty())
+
+        jar2.clearAll()
+    }
+
+    @Test
     fun `loadForRequest with null context returns empty list`() {
         val jar = PersistentCookieJar(null)
         val loaded = jar.loadForRequest("https://example.com".toHttpUrl())

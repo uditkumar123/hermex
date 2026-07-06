@@ -66,7 +66,7 @@ cd android
 ./gradlew assembleDebug
 ```
 
-APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
+Debug APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 To bump version and build:
 ```bash
@@ -78,8 +78,9 @@ To bump version and build:
 ## Automation
 
 - **Pre-commit hook** — verifies Android build passes before commits
-- **GitHub Actions CI** — builds and lints on every push/PR
+- **GitHub Actions CI** — builds, lints, and tests on every push/PR
 - **Auto version bump** — patch version increments automatically on merge to master
+- **GitHub Releases** — publish a signed, non-debuggable release APK
 - **Changelog generator** — generates `CHANGELOG.md` from conventional commits
 
 ## Contributing

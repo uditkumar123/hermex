@@ -1,6 +1,8 @@
 package com.hermex.app.ui.sessionlist
 
 import androidx.test.core.app.ApplicationProvider
+import com.hermex.app.data.api.RetrofitProvider
+import com.hermex.app.data.auth.AuthManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -16,9 +18,14 @@ class SessionListViewModelTest {
 
     @Before
     fun setUp() {
-        viewModel = SessionListViewModel(
-            ApplicationProvider.getApplicationContext()
-        )
+        val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val authManager = AuthManager.getInstance(application)
+        if (authManager.currentServerUrl != null) {
+            authManager.handleSessionExpired()
+        }
+        authManager.clearError()
+        RetrofitProvider.invalidate()
+        viewModel = SessionListViewModel(application)
     }
 
     @Test

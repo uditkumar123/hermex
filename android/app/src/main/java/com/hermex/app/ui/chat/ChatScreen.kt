@@ -257,7 +257,7 @@ fun ChatScreen(
             ChatComposerView(
                 isStreaming = uiState.isStreaming,
                 isSending = uiState.isSending,
-                onSend = { viewModel.sendMessage(it) },
+                onSend = { viewModel.sendMessage(it, selectedModel, selectedProvider) },
                 onCancel = { viewModel.cancelStream() },
                 onSteer = { viewModel.steerChat(it) },
                 currentModel = selectedModel,

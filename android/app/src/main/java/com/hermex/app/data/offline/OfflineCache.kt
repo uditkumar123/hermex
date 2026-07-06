@@ -53,6 +53,12 @@ class OfflineCache(private val context: Context) {
         }
     }
 
+    suspend fun getCachedSessionsForServer(serverUrl: String): List<SessionSummary> {
+        val (sessions, cachedServerUrl) = getCachedSessions()
+        if (cachedServerUrl == null) return emptyList()
+        return if (sameServer(cachedServerUrl, serverUrl)) sessions else emptyList()
+    }
+
     suspend fun getLastUpdated(): Long {
         return try {
             val prefs = context.sessionDataStore.data.first()
@@ -69,5 +75,9 @@ class OfflineCache(private val context: Context) {
         } catch (e: Exception) {
             Timber.e(e, "Failed to clear session cache")
         }
+    }
+
+    private fun sameServer(a: String, b: String): Boolean {
+        return a.trim().trimEnd('/') == b.trim().trimEnd('/')
     }
 }

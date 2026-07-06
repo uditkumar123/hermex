@@ -1,5 +1,6 @@
 package com.hermex.app.ui.workspace
 
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,6 +38,7 @@ fun FileBrowserScreen(
     onClose: () -> Unit
 ) {
     val authManager = AuthManager.getInstance(androidx.compose.ui.platform.LocalContext.current)
+    val authState by authManager.state.collectAsState()
     val scope = rememberCoroutineScope()
     var files by remember { mutableStateOf<List<FileEntry>>(emptyList()) }
     var currentPath by remember { mutableStateOf("/") }
@@ -48,7 +50,7 @@ fun FileBrowserScreen(
     var fileContentLoading by remember { mutableStateOf(false) }
 
     fun loadFiles(path: String) {
-        val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl ?: return
+        val url = (authState as? AuthState.LoggedIn)?.serverUrl ?: return
         val api = RetrofitProvider.createApi(url)
         scope.launch {
             isLoading = true
@@ -66,7 +68,7 @@ fun FileBrowserScreen(
     }
 
     fun loadFileContent(file: FileEntry) {
-        val url = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl ?: return
+        val url = (authState as? AuthState.LoggedIn)?.serverUrl ?: return
         val api = RetrofitProvider.createApi(url)
         scope.launch {
             fileContentLoading = true
@@ -136,10 +138,11 @@ fun FileBrowserScreen(
                         CircularProgressIndicator()
                     }
                 } else if (isImageFile(selectedFile?.name)) {
-                    val imageUrl = buildString {
-                        val base = (authManager.state.value as? AuthState.LoggedIn)?.serverUrl?.trimEnd('/')
-                        if (base != null) append("$base/api/file?session_id=$sessionId&path=${selectedFile?.path ?: selectedFile?.name ?: ""}")
-                    }
+                    val imageUrl = buildRawFileUrl(
+                        baseUrl = (authState as? AuthState.LoggedIn)?.serverUrl,
+                        sessionId = sessionId,
+                        path = selectedFile?.path ?: selectedFile?.name
+                    )
                     Column(
                         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -289,6 +292,12 @@ private fun formatFileSize(bytes: Long): String = when {
     bytes < 1024 * 1024 -> "${bytes / 1024} KB"
     bytes < 1024 * 1024 * 1024 -> "${"%.1f".format(bytes.toDouble() / (1024 * 1024))} MB"
     else -> "${"%.1f".format(bytes.toDouble() / (1024 * 1024 * 1024))} GB"
+}
+
+private fun buildRawFileUrl(baseUrl: String?, sessionId: String, path: String?): String {
+    val base = baseUrl?.trimEnd('/') ?: return ""
+    val filePath = path ?: return ""
+    return "$base/api/file/raw?session_id=${Uri.encode(sessionId)}&path=${Uri.encode(filePath)}"
 }
 
 private fun isImageFile(name: String?): Boolean = name?.let {

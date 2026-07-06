@@ -31,6 +31,9 @@ class AuthManagerTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         authManager = AuthManager.getInstance(context)
+        if (authManager.currentServerUrl != null) {
+            authManager.handleSessionExpired()
+        }
         authManager.clearError()
         RetrofitProvider.invalidate()
     }
@@ -218,6 +221,72 @@ class AuthManagerTest {
 
             assertTrue(result.isFailure)
             assertEquals("Invalid password", authManager.error.first())
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `login succeeds when auth status confirms cookie`() = runTest {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .addHeader("Set-Cookie", "hermes_session=test-token; Path=/; Max-Age=3600; HttpOnly; SameSite=Lax")
+                .setBody("{\"ok\":true}")
+        )
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"auth_enabled\":true,\"logged_in\":true}")
+        )
+        server.start()
+
+        try {
+            val result = authManager.login(server.url("/").toString(), "correct")
+            val warmup = server.takeRequest()
+            val login = server.takeRequest()
+            val status = server.takeRequest()
+
+            assertTrue(result.isSuccess)
+            assertEquals("/", warmup.path)
+            assertEquals("/api/auth/login", login.path)
+            assertEquals("/api/auth/status", status.path)
+            assertTrue(status.getHeader("Cookie")!!.contains("hermes_session=test-token"))
+            assertEquals(AuthState.LoggedIn(server.url("/").toString()), authManager.state.first())
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `login fails when auth status rejects cookie`() = runTest {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"ok\":true}")
+        )
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"auth_enabled\":true,\"logged_in\":false}")
+        )
+        server.start()
+
+        try {
+            val serverUrl = server.url("/").toString()
+            val result = authManager.login(serverUrl, "correct")
+
+            assertTrue(result.isFailure)
+            assertTrue(authManager.error.first()!!.contains("session cookie"))
+            assertEquals(AuthState.LoggedOut(serverUrl), authManager.state.first())
         } finally {
             server.shutdown()
         }

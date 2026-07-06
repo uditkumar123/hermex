@@ -4,8 +4,10 @@ import android.content.Context
 import com.hermex.app.data.model.ChatMessage
 import com.hermex.app.data.offline.AppDatabase
 import com.hermex.app.data.offline.MessageEntity
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 
 class OfflineMessageRepository(context: Context) {
 
@@ -17,13 +19,9 @@ class OfflineMessageRepository(context: Context) {
     }
 
     suspend fun cacheMessages(sessionId: String, messages: List<ChatMessage>) {
-        val entities = messages.map { it.toEntity(sessionId) }
+        val entities = messages.takeLast(MAX_MESSAGES_PER_SESSION).map { it.toEntity(sessionId) }
+        dao.deleteMessages(sessionId)
         dao.insertMessages(entities)
-        val count = dao.getMessageCount(sessionId)
-        if (count > MAX_MESSAGES_PER_SESSION) {
-            val excess = count - MAX_MESSAGES_PER_SESSION
-            dao.trimMessages(sessionId, excess, MAX_MESSAGES_PER_SESSION)
-        }
     }
 
     suspend fun deleteMessages(sessionId: String) {
@@ -48,7 +46,10 @@ class OfflineMessageRepository(context: Context) {
             content = content,
             timestamp = timestamp,
             messageId = messageId,
-            reasoning = reasoning
+            reasoning = reasoning,
+            toolCalls = toolCallsJson?.let { encoded ->
+                runCatching { json.decodeFromString<List<JsonElement>>(encoded) }.getOrNull()
+            }
         )
     }
 

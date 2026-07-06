@@ -23,7 +23,9 @@ cd android
 ./gradlew assembleDebug
 ```
 
-APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
+Debug APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+Public GitHub Releases are signed release APKs produced by `.github/workflows/version-bump.yml`.
 
 Run tests:
 

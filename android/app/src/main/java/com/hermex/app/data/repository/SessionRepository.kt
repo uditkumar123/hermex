@@ -24,24 +24,17 @@ class SessionRepository(
             offlineCache?.cacheSessions(sessions, serverUrl)
             Result.success(sessions)
         } catch (e: Exception) {
-            Timber.e(e, "Failed to fetch sessions, trying offline cache")
-            // Try offline cache on failure
-            val cached = offlineCache?.getCachedSessions()
-            if (cached != null && cached.first.isNotEmpty()) {
-                Result.success(cached.first)
-            } else {
-                Result.failure(e)
-            }
+            Timber.e(e, "Failed to fetch sessions")
+            Result.failure(e)
         }
     }
 
     suspend fun getCachedSessions(): List<SessionSummary> {
-        return offlineCache?.getCachedSessions()?.first ?: emptyList()
+        return offlineCache?.getCachedSessionsForServer(serverUrl) ?: emptyList()
     }
 
     suspend fun isOfflineDataAvailable(): Boolean {
-        val cached = offlineCache?.getCachedSessions()
-        return cached != null && cached.first.isNotEmpty()
+        return getCachedSessions().isNotEmpty()
     }
 
     suspend fun searchSessions(query: String, content: Boolean = true, depth: Int = 5): Result<List<SessionSummary>> {
@@ -194,6 +187,15 @@ class SessionRepository(
             Result.success(api.workspaces())
         } catch (e: Exception) {
             Timber.e(e, "Failed to fetch workspaces")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun fetchProjects(): Result<ProjectsResponse> {
+        return try {
+            Result.success(api.projects())
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to fetch projects")
             Result.failure(e)
         }
     }

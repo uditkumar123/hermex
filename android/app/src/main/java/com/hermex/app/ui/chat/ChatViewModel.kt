@@ -115,7 +115,11 @@ class ChatViewModel(
         }
     }
 
-    fun sendMessage(text: String) {
+    fun sendMessage(
+        text: String,
+        modelOverride: String? = null,
+        modelProviderOverride: String? = null
+    ) {
         val message = text.trim()
         if (message.isEmpty()) return
 
@@ -153,9 +157,10 @@ class ChatViewModel(
                 sessionId = sessionId,
                 message = message,
                 workspace = currentWorkspace,
-                model = currentModel,
-                modelProvider = currentModelProvider,
-                profile = currentProfile
+                model = modelOverride ?: currentModel,
+                modelProvider = modelProviderOverride ?: currentModelProvider,
+                profile = currentProfile,
+                explicitModelPick = modelOverride != null || modelProviderOverride != null
             ).fold(
                 onSuccess = { response ->
                     val streamId = response.streamId

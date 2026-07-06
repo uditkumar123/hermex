@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitProvider {
 
+    private const val CleartextBlockedMessage = "Plain HTTP is only allowed for localhost, private LAN, or Tailscale addresses. Use HTTPS for public servers."
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -158,8 +160,8 @@ object RetrofitProvider {
             val host = try {
                 java.net.URI(normalized).host
             } catch (e: Exception) { Log.w("Hermex", "Failed to parse URL host: ${e.message}"); null }
-            if (host != null && !isLocalAddress(host)) {
-                Log.w("Hermex", "Connecting via unencrypted HTTP to non-local server: $host")
+            if (host == null || !isLocalAddress(host)) {
+                throw IllegalArgumentException(CleartextBlockedMessage)
             }
         }
         if (!normalized.endsWith("/")) {
@@ -183,6 +185,11 @@ object RetrofitProvider {
         if (host.endsWith(".local")) return true
         return false
     }
+
+    internal fun canUsePlainStorageFallback(context: android.content.Context): Boolean {
+        val debuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        return debuggable || android.os.Build.FINGERPRINT == "robolectric"
+    }
 }
 
 class PersistentCookieJar(private val context: android.content.Context? = null) : CookieJar {
@@ -201,8 +208,13 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
                     androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
             } catch (e: Throwable) {
-                Log.w("Hermex", "EncryptedSharedPreferences unavailable, falling back to plain storage", e)
-                ctx.getSharedPreferences("hermex_cookies", android.content.Context.MODE_PRIVATE)
+                if (RetrofitProvider.canUsePlainStorageFallback(ctx)) {
+                    Log.w("Hermex", "EncryptedSharedPreferences unavailable, using debug-only plain cookie storage", e)
+                    ctx.getSharedPreferences("hermex_cookies", android.content.Context.MODE_PRIVATE)
+                } else {
+                    Log.e("Hermex", "EncryptedSharedPreferences unavailable; session cookies will not persist", e)
+                    null
+                }
             }
         }
     }
@@ -221,10 +233,10 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val host = url.host
-        return cookieStore[host]?.filter { cookie ->
-            !cookie.hasExpired()
-        } ?: emptyList()
+        return cookieStore.values
+            .flatten()
+            .filter { cookie -> !cookie.hasExpired() && cookie.matches(url) }
+            .distinctBy { cookie -> listOf(cookie.name, cookie.domain, cookie.path) }
     }
 
     fun clearAll() {
@@ -246,10 +258,14 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
         try {
             val editor = p.edit()
             val hosts = cookieStore.keys.toSet()
+            val previousHosts = p.getStringSet("hosts", emptySet()) ?: emptySet()
+            (previousHosts - hosts).forEach { host ->
+                editor.remove("cookies_$host")
+            }
             editor.putStringSet("hosts", hosts)
             cookieStore.forEach { (host, cookies) ->
                 val serialized = cookies.joinToString("\n") { cookie ->
-                    "${cookie.name}\t${cookie.value}\t${cookie.expiresAt}\t${cookie.domain}\t${cookie.path}"
+                    "${cookie.name}\t${cookie.value}\t${cookie.expiresAt}\t${cookie.domain}\t${cookie.path}\t${cookie.secure}\t${cookie.httpOnly}\t${cookie.hostOnly}"
                 }
                 editor.putString("cookies_$host", serialized)
             }
@@ -269,13 +285,18 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
                     val parts = line.split("\t")
                     if (parts.size >= 5) {
                         try {
-                            Cookie.Builder()
+                            val secure = parts.getOrNull(5)?.toBooleanStrictOrNull() == true
+                            val httpOnly = parts.getOrNull(6)?.toBooleanStrictOrNull() == true
+                            val hostOnly = parts.getOrNull(7)?.toBooleanStrictOrNull() == true
+                            val builder = Cookie.Builder()
                                 .name(parts[0])
                                 .value(parts[1])
                                 .expiresAt(parts[2].toLong())
-                                .domain(parts[3])
+                                .let { if (hostOnly) it.hostOnlyDomain(parts[3]) else it.domain(parts[3]) }
                                 .let { if (parts[4].isNotEmpty()) it.path(parts[4]) else it }
-                                .build()
+                                .let { if (secure) it.secure() else it }
+                                .let { if (httpOnly) it.httpOnly() else it }
+                            builder.build()
                         } catch (e: Exception) { Log.w("Hermex", "Failed to parse cookie: ${e.message}"); null }
                     } else null
                 }
