@@ -33,6 +33,12 @@ android {
             keyAlias = System.getenv("KEY_ALIAS") ?: "notset"
             keyPassword = System.getenv("KEY_PASSWORD") ?: "notset"
         }
+        create("githubRelease") {
+            storeFile = file("../debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -47,6 +53,10 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+        }
+        create("githubRelease") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("githubRelease")
         }
     }
 

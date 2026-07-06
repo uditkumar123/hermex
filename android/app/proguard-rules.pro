@@ -28,3 +28,6 @@
 
 # Markwon
 -keep class io.noties.markwon.** { *; }
+
+# Security-Crypto / Tink (errorprone annotation missing at runtime)
+-dontwarn com.google.errorprone.annotations.Immutable
