@@ -4,14 +4,14 @@ Hermex is a native Android app (Gradle/Kotlin, Google Play + GitHub APK) for a
 self-hosted `hermes-webui` server. `PROJECT_SPEC.md` is the product/API source of
 truth — if a request conflicts with it, **stop and ask**. Keep it tool-agnostic.
 
-## Session start & wrap-up
-- Read `CURRENT.md` first if it exists — gitignored local state; never committed.
-- Read only `PROJECT_SPEC.md` sections listed in CURRENT.md's **Spec Read** field;
-  never the full ~850-line spec unless told to.
+**This file is gitignored** — edits are local only. `CLAUDE.md` is a 1-line
+pointer that just reads `AGENTS.md`.
+
+## Session start
+- Read `CURRENT.md` if it exists — gitignored local state; never committed.
 - Implement only the GitHub Issue the human selects, one labeled `ready-for-agent`,
   or one named in CURRENT.md — not every open issue.
-- On wrap-up: verify build + tests pass, overwrite CURRENT.md, then commit.
-  No append-only log — history is `git log` and merged PRs.
+- On wrap-up: verify build + tests pass, overwrite CURRENT.md (don't commit it).
 
 ## Workflow
 - One issue → `issue/<n>-slug` branch → one PR (no issue → `chore/` or `fix/`).
@@ -21,24 +21,56 @@ truth — if a request conflicts with it, **stop and ask**. Keep it tool-agnosti
   commits: `feat:` → minor, `fix:`/`perf:` → patch, `BREAKING` → major).
   `[skip ci]` and `chore:` commits are skipped.
 
-## Commands
+## Commands (PowerShell on Windows)
+
+```powershell
+# Build, test, lint — all from android\ directory
+.\gradlew assembleDebug
+.\gradlew test
+.\gradlew lint
+.\gradlew assembleDebug; if ($?) { .\gradlew test }
 ```
-cd android && ./gradlew assembleDebug      # build
-cd android && ./gradlew test               # unit tests (JVM, no emulator)
-cd android && ./gradlew lint               # lint
-cd android && ./gradlew assembleDebug test # combined
-```
-- **Pre-commit hook**: stages under `android/` trigger `assembleDebug`.
-  Bypass with `git commit --no-verify` if broken, but fix the build before pushing.
+
+- A bash pre-commit hook lives at `.git-hooks/pre-commit` (source) and
+  `.git/hooks/pre-commit` (active copy). It checks staged Android files and runs
+  `assembleDebug`. Bypass with `git commit --no-verify` if broken, but fix before
+  pushing. The hook only triggers in Git Bash/WSL — not from PowerShell.
 - Build before review or committing; manual build-test for UI changes.
 - The maintainer uses **VS Code**, not Android Studio. Prefer terminal validation.
 
 ## Testing
 - Unit tests use **Robolectric** + **MockK**, run on JVM (no emulator needed).
-  `android.testOptions.unitTests.isReturnDefaultValues = true` is set.
-- Test sources mirror main at `android/app/src/test/java/com/hermex/app/…`.
-- `Turbine` for Flow assertions, `MockWebServer` for HTTP fixtures.
-- `androidTest/` (instrumented) exists but CI only runs unit tests.
+  `unitTests.isReturnDefaultValues = true` is set in `build.gradle.kts`.
+- **Turbine** for Flow assertions, **MockWebServer** for HTTP fixtures.
+- Test packages: `data/api/`, `data/auth/`, `ui/chat/`, `ui/navigation/`,
+  `ui/sessionlist/`, `ui/workspace/`.
+- `androidTest/` (instrumented) exists but CI runs unit tests only.
+- **Known fragility**: shared `AuthManager` singleton leaks state across test
+  classes. Each `@Before` should reset via `authManager.handleSessionExpired()`
+  + `clearError()` + `RetrofitProvider.invalidate()`.
+
+## Source structure
+
+```
+android/app/src/main/java/com/hermex/app/
+├── data/
+│   ├── api/        Retrofit interface (HermesApi), RetrofitProvider, SSEClient
+│   ├── auth/       AuthManager (singleton), ServerRegistry, CustomHeaders
+│   ├── model/      @Serializable DTOs (Session, Chat, SSE, Auth, Common)
+│   ├── offline/    DataStore (sessions) + Room (messages, DAO, DB)
+│   └── repository/ SessionRepository, ChatRepository, OfflineMessageRepository
+├── ui/
+│   ├── auth/       OnboardingScreen, ConnectScreen, AuthViewModel, SettingsScreen
+│   ├── chat/       ChatScreen, ChatViewModel, MessageBubbleView, ToolCallCardView
+│   ├── navigation/ NavGraph, StartupRouteResolver
+│   ├── sessionlist/SessionListScreen, SessionListViewModel
+│   ├── splash/     SplashActivity
+│   ├── theme/      Color, Theme (light/dark Material3), Type
+│   └── workspace/  FileBrowserScreen, SkillsViewModel, MemoryViewModel
+├── util/           Constants, Extensions
+├── HermexApp.kt    Application class (Timber)
+└── MainActivity.kt Single-activity entrypoint
+```
 
 ## Hard rules
 1. **Never invent API endpoints or JSON shapes.** Verify against running server
@@ -53,17 +85,8 @@ cd android && ./gradlew assembleDebug test # combined
 
 ## App identity
 Namespace `com.hermex.app` · version in `android/app/build.gradle.kts`.
-Tested against `hermes-webui` v0.51.85 (SHA in `UPSTREAM_TESTED_SHA`).
-
-## Source structure
-```
-android/app/src/main/java/com/hermex/app/
-├── data/          api(Retrofit + SSE), auth, model(@Serializable DTOs), offline, repository
-├── ui/            auth, chat, navigation, sessionlist, theme, workspace
-├── util/
-├── HermexApp.kt   Application class
-└── MainActivity.kt  Single-activity entrypoint
-```
+Upstream pin: `UPSTREAM_TESTED_SHA` (`f1d399b4` = `hermes-webui` v0.51.85).
+Gradle 8.9 · JDK 17 · SDK 35 · minSdk 26.
 
 ## Working with the human
 - Surface tradeoffs before non-obvious choices; when in doubt, ask.

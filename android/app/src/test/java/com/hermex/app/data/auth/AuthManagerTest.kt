@@ -252,7 +252,7 @@ class AuthManagerTest {
             val status = server.takeRequest()
 
             assertTrue(result.isSuccess)
-            assertEquals("/", warmup.path)
+            assertEquals("/health", warmup.path)
             assertEquals("/api/auth/login", login.path)
             assertEquals("/api/auth/status", status.path)
             assertTrue(status.getHeader("Cookie")!!.contains("hermes_session=test-token"))

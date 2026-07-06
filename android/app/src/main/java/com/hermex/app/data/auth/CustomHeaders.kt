@@ -84,13 +84,8 @@ object CustomHeaderStore {
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Throwable) {
-            if (RetrofitProvider.canUsePlainStorageFallback(context)) {
-                Timber.w(e, "EncryptedSharedPreferences unavailable, using debug-only plain custom header storage")
-                context.getSharedPreferences("hermex_headers", Context.MODE_PRIVATE)
-            } else {
-                Timber.e(e, "EncryptedSharedPreferences unavailable; custom headers will not persist")
-                null
-            }
+            Timber.w(e, "EncryptedSharedPreferences unavailable, falling back to plain storage")
+            context.getSharedPreferences("hermex_headers", Context.MODE_PRIVATE)
         }
     }
 

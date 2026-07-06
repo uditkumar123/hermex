@@ -139,11 +139,11 @@ object RetrofitProvider {
     fun warmupSession(baseUrl: String, context: android.content.Context? = null) {
         try {
             val normalizedUrl = normalizeUrl(baseUrl)
-            val client = getOrCreate(baseUrl, context).callFactory() as OkHttpClient
+            val client = createOkHttpClient(context = context, readTimeoutSeconds = 10, notifyUnauthorized = false)
             val request = okhttp3.Request.Builder()
-                .url(normalizedUrl)
+                .url("${normalizedUrl}health")
                 .get()
-                .header("Accept", "text/html,application/json")
+                .header("Accept", "application/json")
                 .build()
             client.newCall(request).execute().close()
         } catch (e: Exception) {
@@ -186,10 +186,6 @@ object RetrofitProvider {
         return false
     }
 
-    internal fun canUsePlainStorageFallback(context: android.content.Context): Boolean {
-        val debuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        return debuggable || android.os.Build.FINGERPRINT == "robolectric"
-    }
 }
 
 class PersistentCookieJar(private val context: android.content.Context? = null) : CookieJar {
@@ -208,13 +204,8 @@ class PersistentCookieJar(private val context: android.content.Context? = null) 
                     androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
             } catch (e: Throwable) {
-                if (RetrofitProvider.canUsePlainStorageFallback(ctx)) {
-                    Log.w("Hermex", "EncryptedSharedPreferences unavailable, using debug-only plain cookie storage", e)
-                    ctx.getSharedPreferences("hermex_cookies", android.content.Context.MODE_PRIVATE)
-                } else {
-                    Log.e("Hermex", "EncryptedSharedPreferences unavailable; session cookies will not persist", e)
-                    null
-                }
+                Log.w("Hermex", "EncryptedSharedPreferences unavailable, falling back to plain cookie storage", e)
+                ctx.getSharedPreferences("hermex_cookies", android.content.Context.MODE_PRIVATE)
             }
         }
     }
